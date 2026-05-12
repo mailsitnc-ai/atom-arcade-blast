@@ -158,7 +158,7 @@ export default function ChemistryGame() {
         )}
       </div>
 
-      <footer className="mt-4 text-[9px] opacity-60">© ATOM ARCADE · made for chemistry nerds</footer>
+      <footer className="mt-4 text-[9px] opacity-60">© CHEM QUEST · made for chemistry nerds</footer>
     </div>
   );
 }
