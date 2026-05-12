@@ -712,6 +712,28 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
         ctx.fillStyle = "#39ff14"; ctx.fillRect(ex-10, ey-18, 20*(e.hp/level.enemyHp), 3);
       }
 
+      // portal (waiting room before boss)
+      if (s.portal && !s.boss) {
+        const px2 = s.portal.x, py2 = s.portal.y, t = s.portal.t;
+        ctx.save();
+        for (let r = 4; r > 0; r--) {
+          const rad = 24 + r*6 + Math.sin(t*0.08 + r)*3;
+          ctx.shadowBlur = 20; ctx.shadowColor = "#22e0d0";
+          ctx.strokeStyle = `rgba(34,224,208,${0.25*r})`;
+          ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.arc(px2, py2, rad, 0, Math.PI*2); ctx.stroke();
+        }
+        ctx.shadowBlur = 30; ctx.shadowColor = "#b388ff";
+        ctx.fillStyle = "#b388ff";
+        ctx.beginPath(); ctx.arc(px2, py2, 18, 0, Math.PI*2); ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = "#fff"; ctx.font = "bold 11px monospace"; ctx.textAlign = "center";
+        ctx.fillText("ENTER PORTAL", px2, py2 - 44);
+        ctx.fillStyle = "#fff176"; ctx.font = "9px monospace";
+        ctx.fillText("→ BOSS ARENA ←", px2, py2 + 50);
+        ctx.restore();
+      }
+
       // boss
       if (s.boss) {
         const b = s.boss;
@@ -725,13 +747,7 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
           ctx.fillText(`▶ ${level.boss.name.toUpperCase()} ◀`, W/2, H/2+18);
           ctx.shadowBlur = 0;
         } else {
-          ctx.shadowBlur = 30; ctx.shadowColor = level.boss.color;
-          ctx.fillStyle = level.boss.color;
-          ctx.beginPath(); ctx.arc(b.x, b.y, 45, 0, Math.PI*2); ctx.fill();
-          ctx.shadowBlur = 0;
-          ctx.fillStyle = "#000";
-          ctx.fillRect(b.x-20, b.y-10, 8,8); ctx.fillRect(b.x+12, b.y-10, 8,8);
-          ctx.fillRect(b.x-15, b.y+10, 30, 4);
+          drawBoss(ctx, b, level.boss.pattern, level.boss.color, s.bossExtra);
         }
       }
 
