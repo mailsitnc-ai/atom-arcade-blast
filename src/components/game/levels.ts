@@ -16,6 +16,7 @@ export type LevelDef = {
     pattern: "radial" | "aimed" | "spiral" | "burst" | "fusion";
     intro: string;
   };
+  quiz: { q: string; choices: string[]; answer: number }[];
   learning: {
     headline: string;
     tagline: string;
