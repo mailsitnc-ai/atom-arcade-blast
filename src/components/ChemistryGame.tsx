@@ -25,6 +25,13 @@ export default function ChemistryGame() {
   const [nameInput, setNameInput] = useState("AAA");
   const [hud, setHud] = useState({ ammo: 10, atomsCollected: 0, enemiesLeft: 8, unlimited: false, bossHp: 0, bossMax: 0, bossActive: false, weapon: "" });
 
+  // Stable callback refs so PlayCanvas effect doesn't re-init every frame
+  const onCompleteRef = useRef<() => void>(() => {});
+  const onDeathRef = useRef<() => void>(() => {});
+  const onScoreRef = useRef<(n: number) => void>(() => {});
+  const onStatRef = useRef<(k: any, v?: number) => void>(() => {});
+  const onHudRef = useRef<(h: any) => void>(() => {});
+
   useEffect(() => { setLb(loadLB()); }, []);
 
   const startGame = () => {
