@@ -63,8 +63,8 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.129 0.042 264.695);
+  --background: oklch(0.13 0.05 280);
+  --foreground: oklch(0.97 0.02 200);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.129 0.042 264.695);
   --popover: oklch(1 0 0);
@@ -138,7 +138,32 @@
   }
 
   body {
-    background-color: var(--color-background);
-    color: var(--color-foreground);
+    background-color: #07020f;
+    color: #e6f7ff;
+    font-family: 'Press Start 2P', ui-monospace, monospace;
   }
+}
+
+@font-face {
+  font-family: 'Press Start 2P';
+  src: url('https://fonts.gstatic.com/s/pressstart2p/v15/e3t4euO8T-267oIAQAu6jDQyK3nVivM.woff2') format('woff2');
+  font-display: swap;
+}
+
+@keyframes neon-pulse {
+  0%,100% { text-shadow: 0 0 6px #0ff, 0 0 12px #0ff, 0 0 24px #0ff; }
+  50% { text-shadow: 0 0 10px #f0f, 0 0 20px #f0f, 0 0 40px #f0f; }
+}
+@keyframes flicker {
+  0%,100% { opacity: 1; } 50% { opacity: 0.7; }
+}
+@keyframes scan {
+  0% { background-position: 0 0; } 100% { background-position: 0 100%; }
+}
+.neon { animation: neon-pulse 2s ease-in-out infinite; }
+.flicker { animation: flicker 1.2s steps(2) infinite; }
+.crt::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(180deg, rgba(0,0,0,0.18) 0 2px, transparent 2px 4px);
+  mix-blend-mode: multiply;
 }
