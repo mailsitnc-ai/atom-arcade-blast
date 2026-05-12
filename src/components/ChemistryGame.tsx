@@ -268,7 +268,7 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
       });
     }
     stateRef.current = {
-      player: { x: W/2, y: H/2, hp: 3, iframes: 0 },
+      player: { x: 30, y: H/2, hp: 3, iframes: 0 },
       bullets: [] as Bullet[],
       eBullets: [] as Bullet[],
       enemies, atoms,
