@@ -33,7 +33,7 @@ export default function QuizScreen({
       style={{ background: "radial-gradient(circle at 50% 30%, #04231a 0%, #07020f 70%)" }}>
       <div className="w-full max-w-2xl border-4 p-6 md:p-8" style={{ borderColor: "#fff176", boxShadow: "0 0 40px #fff176 inset, 0 0 30px #0ff" }}>
         <div className="flex justify-between text-[10px] md:text-xs mb-4">
-          <span style={{ color: "#0ff" }}>>> POP QUIZ — LEVEL {level.id}</span>
+          <span style={{ color: "#0ff" }}>{">>"} POP QUIZ — LEVEL {level.id}</span>
           <span style={{ color: "#fff176" }}>Q {idx + 1}/{questions.length} · ✔ {correct} · ✘ {wrong}</span>
         </div>
         <h2 className="neon text-lg md:text-2xl mb-6" style={{ color: "#fff176" }}>{q.q}</h2>
