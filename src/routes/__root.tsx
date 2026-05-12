@@ -72,10 +72,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "ATOM ARCADE — Retro Chemistry Quest" },
+      { title: "CHEM QUEST — Retro Chemistry Adventure" },
       { name: "description", content: "A retro 8-bit arcade chemistry adventure across 5 explosive levels." },
-      { name: "author", content: "Atom Arcade" },
-      { property: "og:title", content: "ATOM ARCADE — Retro Chemistry Quest" },
+      { name: "author", content: "Chem Quest" },
+      { property: "og:title", content: "CHEM QUEST — Retro Chemistry Adventure" },
       { property: "og:description", content: "Pixel-art chemistry arcade with bosses, atoms & element fusion." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
