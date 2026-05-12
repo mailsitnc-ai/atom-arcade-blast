@@ -1,0 +1,129 @@
+export type LevelDef = {
+  id: number;
+  title: string;
+  concept: string;
+  weapon: { name: string; color: string; speed: number; size: number; damage: number };
+  bgA: string;
+  bgB: string;
+  enemyColor: string;
+  enemySpeed: number;
+  enemyHp: number;
+  boss: {
+    name: string;
+    color: string;
+    hp: number;
+    speed: number;
+    pattern: "radial" | "aimed" | "spiral" | "burst" | "fusion";
+    intro: string;
+  };
+  learning: {
+    headline: string;
+    tagline: string;
+    bullets: string[];
+    analogy: string;
+    diagram: "atom" | "bond" | "ph" | "reaction" | "periodic";
+  };
+};
+
+export const LEVELS: LevelDef[] = [
+  {
+    id: 1,
+    title: "Atomic Structure",
+    concept: "Inside the Atom",
+    weapon: { name: "Electron Blaster", color: "#7df9ff", speed: 9, size: 5, damage: 1 },
+    bgA: "#0a0628", bgB: "#1a0a4a",
+    enemyColor: "#ff6ec7", enemySpeed: 1.2, enemyHp: 2,
+    boss: { name: "Radioactive Slime", color: "#7CFC00", hp: 60, speed: 1.4, pattern: "radial", intro: "WARNING: UNSTABLE ISOTOPE" },
+    learning: {
+      headline: "ATOMIC STRUCTURE",
+      tagline: "Everything is made of atoms.",
+      bullets: [
+        "Protons (+) live in the nucleus.",
+        "Neutrons (0) sit beside protons.",
+        "Electrons (-) zip around in orbits.",
+      ],
+      analogy: "Think of an atom like a tiny solar system: nucleus = sun, electrons = planets.",
+      diagram: "atom",
+    },
+  },
+  {
+    id: 2,
+    title: "Chemical Bonding",
+    concept: "How Atoms Connect",
+    weapon: { name: "Molecular Beam Cannon", color: "#b388ff", speed: 11, size: 6, damage: 2 },
+    bgA: "#0d0233", bgB: "#2a0a55",
+    enemyColor: "#ffb86c", enemySpeed: 1.5, enemyHp: 2,
+    boss: { name: "Unstable Molecule Titan", color: "#ff5e94", hp: 90, speed: 1.6, pattern: "aimed", intro: "BOND OVERLOAD DETECTED" },
+    learning: {
+      headline: "CHEMICAL BONDING",
+      tagline: "Atoms hold hands to form molecules.",
+      bullets: [
+        "Ionic bonds: one atom gives an electron.",
+        "Covalent bonds: atoms share electrons.",
+        "Metallic bonds: a sea of free electrons.",
+      ],
+      analogy: "Bonds are like LEGO clicks between atoms — sharing or trading bricks.",
+      diagram: "bond",
+    },
+  },
+  {
+    id: 3,
+    title: "Acids & Bases",
+    concept: "The pH Scale",
+    weapon: { name: "Acid Launcher", color: "#39ff14", speed: 8, size: 8, damage: 2 },
+    bgA: "#04231a", bgB: "#0a4a2e",
+    enemyColor: "#39ff14", enemySpeed: 1.8, enemyHp: 3,
+    boss: { name: "Plasma Reactor Robot", color: "#00e5ff", hp: 130, speed: 1.8, pattern: "spiral", intro: "pH CRITICAL — CORROSIVE MODE" },
+    learning: {
+      headline: "ACIDS & BASES",
+      tagline: "From sour lemons to slippery soap.",
+      bullets: [
+        "Acids release H+ ions (pH < 7).",
+        "Bases release OH- ions (pH > 7).",
+        "Neutral water sits at pH 7.",
+      ],
+      analogy: "pH scale = volume knob: low = sour acid, mid = water, high = soapy base.",
+      diagram: "ph",
+    },
+  },
+  {
+    id: 4,
+    title: "Chemical Reactions",
+    concept: "Reactants → Products",
+    weapon: { name: "Chain Reaction Plasma Gun", color: "#ff3df0", speed: 12, size: 7, damage: 3 },
+    bgA: "#22041a", bgB: "#5a0a3a",
+    enemyColor: "#ff3df0", enemySpeed: 2.1, enemyHp: 3,
+    boss: { name: "Toxic Mutation Beast", color: "#ff2e2e", hp: 180, speed: 2.0, pattern: "burst", intro: "EXOTHERMIC RAGE INCOMING" },
+    learning: {
+      headline: "CHEMICAL REACTIONS",
+      tagline: "Atoms rearrange into new substances.",
+      bullets: [
+        "Reactants are what you start with.",
+        "Products are what you end up with.",
+        "Energy is released or absorbed.",
+      ],
+      analogy: "Like baking: flour + eggs → cake. The pieces re-arrange into something new.",
+      diagram: "reaction",
+    },
+  },
+  {
+    id: 5,
+    title: "Periodic Table & Fusion",
+    concept: "Element Fusion",
+    weapon: { name: "Element Fusion Cannon", color: "#fff176", speed: 14, size: 10, damage: 4 },
+    bgA: "#2a1a04", bgB: "#5a3a0a",
+    enemyColor: "#fff176", enemySpeed: 2.4, enemyHp: 4,
+    boss: { name: "Fusion-Core Final Boss", color: "#ffe600", hp: 260, speed: 2.2, pattern: "fusion", intro: "STELLAR CORE IGNITED" },
+    learning: {
+      headline: "PERIODIC TABLE & FUSION",
+      tagline: "118 elements. Infinite possibilities.",
+      bullets: [
+        "Rows = periods (electron shells).",
+        "Columns = groups (similar behavior).",
+        "Fusion combines small atoms → bigger atoms + ENERGY.",
+      ],
+      analogy: "The Sun fuses Hydrogen into Helium — that's how stars shine.",
+      diagram: "periodic",
+    },
+  },
+];
