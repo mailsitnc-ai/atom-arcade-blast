@@ -636,7 +636,8 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
       cvs.removeEventListener("mousemove", onMove);
       cvs.removeEventListener("mousedown", onDown);
     };
-  }, [level, fire, onComplete, onDeath, onHud, onScore, onStat]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [level.id]);
 
   return (
     <canvas
