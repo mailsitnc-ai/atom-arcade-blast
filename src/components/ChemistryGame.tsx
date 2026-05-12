@@ -500,7 +500,7 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
 
       // Boss spawn after all enemies dead
       if (s.enemies.length === 0 && !s.boss && !s.bossDefeated) {
-        s.boss = { x: W/2, y: 80, hp: level.boss.hp, maxHp: level.boss.hp, phase: 0, cd: 120, t: 0, introT: 120 };
+        s.boss = { x: W/2, y: 80, hp: level.boss.hp, maxHp: level.boss.hp, phase: 0, cd: 120, t: 0, introT: 120, specialCd: 200, dashT: 0 };
         sfx("boss");
       }
 
@@ -510,10 +510,64 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
         else {
           b.t++;
           // movement
-          b.x += Math.sin(b.t * 0.02) * level.boss.speed * 1.5;
-          b.y = 80 + Math.sin(b.t * 0.01) * 20;
+          if (b.dashT > 0) {
+            // dash toward player (L2 special)
+            const dxp = p.x - b.x, dyp = p.y - b.y, dd = Math.hypot(dxp, dyp) || 1;
+            b.x += (dxp/dd) * 6; b.y += (dyp/dd) * 6;
+            b.dashT--;
+          } else {
+            b.x += Math.sin(b.t * 0.02) * level.boss.speed * 1.5;
+            b.y = 80 + Math.sin(b.t * 0.01) * 20 + (level.id >= 4 ? Math.cos(b.t*0.03)*30 : 0);
+          }
           b.x = Math.max(60, Math.min(W-60, b.x));
+          b.y = Math.max(60, Math.min(H-120, b.y));
           b.cd--;
+          // ===== Per-boss SPECIAL abilities =====
+          b.specialCd--;
+          if (b.specialCd <= 0) {
+            b.specialCd = 220;
+            if (level.id === 1) {
+              // Slime: spawn 2 mini slimes
+              for (let i = 0; i < 2; i++) {
+                s.enemies.push({
+                  x: b.x + (Math.random()-0.5)*40, y: b.y + 30,
+                  hp: 1, cd: 60, vx: (Math.random()-0.5)*2, vy: (Math.random()-0.5)*2,
+                });
+              }
+              sfx("hit");
+            } else if (level.id === 2) {
+              // Titan: charge dash
+              b.dashT = 30;
+              sfx("boss");
+            } else if (level.id === 3) {
+              // Robot: rotating laser sweep — 24 fast bullets in a sweep
+              for (let i = 0; i < 24; i++) {
+                const a = (i/24)*Math.PI*2;
+                s.eBullets.push({ x:b.x, y:b.y, vx:Math.cos(a)*5.5, vy:Math.sin(a)*5.5, dmg:1, life:120 });
+              }
+              sfx("combo");
+            } else if (level.id === 4) {
+              // Beast: poison cluster aimed at player
+              for (let i = -2; i <= 2; i++) {
+                const a = Math.atan2(p.y-b.y, p.x-b.x) + i*0.15;
+                s.eBullets.push({ x:b.x, y:b.y, vx:Math.cos(a)*5, vy:Math.sin(a)*5, dmg:1, life:160 });
+              }
+              sfx("hit");
+            } else if (level.id === 5) {
+              // Fusion core: huge nova + summon 3 minions
+              for (let i = 0; i < 18; i++) {
+                const a = (i/18)*Math.PI*2 + b.t*0.01;
+                s.eBullets.push({ x:b.x, y:b.y, vx:Math.cos(a)*4.5, vy:Math.sin(a)*4.5, dmg:1, life:200 });
+              }
+              for (let i = 0; i < 3; i++) {
+                s.enemies.push({
+                  x: b.x + Math.cos(i*2.1)*60, y: b.y + Math.sin(i*2.1)*60,
+                  hp: 2, cd: 60, vx: 0, vy: 0,
+                });
+              }
+              sfx("boss");
+            }
+          }
           if (b.cd <= 0) {
             b.cd = b.hp < b.maxHp/2 ? 30 : 50;
             const pat = level.boss.pattern;
