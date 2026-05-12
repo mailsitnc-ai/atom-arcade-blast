@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { LEVELS } from "./game/levels";
 import LearningScreen from "./game/LearningScreen";
+import QuizScreen from "./game/QuizScreen";
 import { sfx } from "./game/sound";
 import { loadLB, saveLB, type LBEntry } from "./game/leaderboard";
 
-type Phase = "menu" | "learn-intro" | "play" | "learn-recap" | "gameover" | "leaderboard" | "victory";
+type Phase = "menu" | "learn-intro" | "quiz" | "play" | "learn-recap" | "gameover" | "leaderboard" | "victory";
 type V = { x: number; y: number };
 type Bullet = V & { vx: number; vy: number; dmg: number; life: number };
 type PBullet = Bullet & { seek?: boolean; split?: number; trail?: string };
@@ -112,9 +113,16 @@ export default function ChemistryGame() {
               level={LEVELS[levelIdx]}
               mode={phase === "learn-intro" ? "intro" : "recap"}
               onContinue={() => {
-                if (phase === "learn-intro") setPhase("play");
+                if (phase === "learn-intro") setPhase("quiz");
                 else { setLevelIdx(i => i + 1); setPhase("learn-intro"); }
               }}
+            />
+          )}
+          {phase === "quiz" && (
+            <QuizScreen
+              level={LEVELS[levelIdx]}
+              onPass={() => setPhase("play")}
+              onRetry={() => setPhase("learn-intro")}
             />
           )}
           {phase === "gameover" && (
@@ -293,6 +301,8 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
       mouse: { x: W/2, y: 0, down: false },
       boss: null as Boss | null,
       bossDefeated: false,
+      portal: null as { x: number; y: number; t: number } | null,
+      bossExtra: { dashCd: 0, minionCd: 0, beamCd: 0, beamT: 0 },
       shake: 0, comboT: 0, combo: 0,
       lastShot: 0, time: 0,
     };
@@ -490,10 +500,18 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
         }
       }
 
-      // Boss spawn after all enemies dead
-      if (s.enemies.length === 0 && !s.boss && !s.bossDefeated) {
-        s.boss = { x: W/2, y: 80, hp: level.boss.hp, maxHp: level.boss.hp, phase: 0, cd: 120, t: 0, introT: 120 };
-        sfx("boss");
+      // Portal appears after enemies cleared — player must enter it to start boss
+      if (s.enemies.length === 0 && !s.boss && !s.bossDefeated && !s.portal) {
+        s.portal = { x: W/2, y: H/2, t: 0 };
+      }
+      if (s.portal && !s.boss) {
+        s.portal.t++;
+        if (Math.hypot(s.portal.x - p.x, s.portal.y - p.y) < 32) {
+          s.boss = { x: W/2, y: 80, hp: level.boss.hp, maxHp: level.boss.hp, phase: 0, cd: 120, t: 0, introT: 120 };
+          s.portal = null;
+          spawnParticles(s, p.x, p.y, "#22e0d0", 30);
+          sfx("boss");
+        }
       }
 
       if (s.boss) {
@@ -539,6 +557,71 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
               bullets.push({ x:b.x, y:b.y, vx:Math.cos(a)*6, vy:Math.sin(a)*6, dmg:2, life:220 });
             }
             s.eBullets.push(...bullets);
+          }
+          // Per-boss UNIQUE abilities
+          const ex = s.bossExtra;
+          const pat = level.boss.pattern;
+          if (pat === "radial") {
+            // Radioactive Slime: leaves toxic puddles (slow eBullets) every ~2s
+            ex.minionCd--;
+            if (ex.minionCd <= 0) {
+              ex.minionCd = 90;
+              for (let i=0;i<4;i++) {
+                const a = Math.random()*Math.PI*2;
+                s.eBullets.push({ x:b.x+Math.cos(a)*30, y:b.y+Math.sin(a)*30, vx:Math.cos(a)*0.6, vy:Math.sin(a)*0.6, dmg:1, life:260 });
+              }
+            }
+          } else if (pat === "aimed") {
+            // Molecule Titan: dashes at the player
+            ex.dashCd--;
+            if (ex.dashCd <= 0) {
+              ex.dashCd = 180;
+              const a = Math.atan2(p.y-b.y, p.x-b.x);
+              b.x += Math.cos(a)*60; b.y += Math.sin(a)*60;
+              s.shake = 10;
+            }
+          } else if (pat === "spiral") {
+            // Plasma Robot: sweeping laser beam
+            ex.beamCd--;
+            if (ex.beamCd <= 0 && ex.beamT <= 0) { ex.beamCd = 220; ex.beamT = 80; }
+            if (ex.beamT > 0) {
+              ex.beamT--;
+              const a = Math.atan2(p.y-b.y, p.x-b.x);
+              // damage line
+              const dx = p.x - b.x, dy = p.y - b.y;
+              const projLen = dx*Math.cos(a) + dy*Math.sin(a);
+              const px2 = b.x + Math.cos(a)*projLen, py2 = b.y + Math.sin(a)*projLen;
+              if (projLen > 0 && Math.hypot(px2-p.x, py2-p.y) < 8 && p.iframes <= 0) {
+                p.hp--; p.iframes = 50; s.shake = 10; sfx("hit");
+                if (p.hp <= 0 && !dead) { dead = true; setTimeout(onDeath.current!, 200); }
+              }
+            }
+          } else if (pat === "burst") {
+            // Toxic Beast: spawns minion enemies
+            ex.minionCd--;
+            if (ex.minionCd <= 0 && s.enemies.length < 4) {
+              ex.minionCd = 200;
+              for (let i=0;i<2;i++) {
+                s.enemies.push({
+                  x: b.x + (Math.random()-0.5)*40, y: b.y + 40,
+                  hp: 1, cd: 60,
+                  vx: (Math.random()-0.5)*level.enemySpeed,
+                  vy: (Math.random()-0.5)*level.enemySpeed,
+                });
+              }
+            }
+          } else { // fusion
+            // Final Boss: orbital satellite shots
+            ex.minionCd--;
+            if (ex.minionCd <= 0) {
+              ex.minionCd = 60;
+              for (let i=0;i<2;i++) {
+                const a = b.t*0.08 + i*Math.PI;
+                const ox = b.x + Math.cos(a)*60, oy = b.y + Math.sin(a)*60;
+                const aim = Math.atan2(p.y-oy, p.x-ox);
+                s.eBullets.push({ x:ox, y:oy, vx:Math.cos(aim)*4.5, vy:Math.sin(aim)*4.5, dmg:1, life:200 });
+              }
+            }
           }
           // bullets hit boss
           for (const bl of s.bullets) {
@@ -629,6 +712,28 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
         ctx.fillStyle = "#39ff14"; ctx.fillRect(ex-10, ey-18, 20*(e.hp/level.enemyHp), 3);
       }
 
+      // portal (waiting room before boss)
+      if (s.portal && !s.boss) {
+        const px2 = s.portal.x, py2 = s.portal.y, t = s.portal.t;
+        ctx.save();
+        for (let r = 4; r > 0; r--) {
+          const rad = 24 + r*6 + Math.sin(t*0.08 + r)*3;
+          ctx.shadowBlur = 20; ctx.shadowColor = "#22e0d0";
+          ctx.strokeStyle = `rgba(34,224,208,${0.25*r})`;
+          ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.arc(px2, py2, rad, 0, Math.PI*2); ctx.stroke();
+        }
+        ctx.shadowBlur = 30; ctx.shadowColor = "#b388ff";
+        ctx.fillStyle = "#b388ff";
+        ctx.beginPath(); ctx.arc(px2, py2, 18, 0, Math.PI*2); ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = "#fff"; ctx.font = "bold 11px monospace"; ctx.textAlign = "center";
+        ctx.fillText("ENTER PORTAL", px2, py2 - 44);
+        ctx.fillStyle = "#fff176"; ctx.font = "9px monospace";
+        ctx.fillText("→ BOSS ARENA ←", px2, py2 + 50);
+        ctx.restore();
+      }
+
       // boss
       if (s.boss) {
         const b = s.boss;
@@ -642,13 +747,7 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
           ctx.fillText(`▶ ${level.boss.name.toUpperCase()} ◀`, W/2, H/2+18);
           ctx.shadowBlur = 0;
         } else {
-          ctx.shadowBlur = 30; ctx.shadowColor = level.boss.color;
-          ctx.fillStyle = level.boss.color;
-          ctx.beginPath(); ctx.arc(b.x, b.y, 45, 0, Math.PI*2); ctx.fill();
-          ctx.shadowBlur = 0;
-          ctx.fillStyle = "#000";
-          ctx.fillRect(b.x-20, b.y-10, 8,8); ctx.fillRect(b.x+12, b.y-10, 8,8);
-          ctx.fillRect(b.x-15, b.y+10, 30, 4);
+          drawBoss(ctx, b, level.boss.pattern, level.boss.color, s.bossExtra);
         }
       }
 
@@ -763,4 +862,125 @@ function spawnParticles(s: any, x: number, y: number, color: string, n: number) 
     const a = Math.random()*Math.PI*2, sp = Math.random()*4+1;
     s.particles.push({ x, y, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp, life: 20+Math.random()*15, color });
   }
+}
+
+function drawBoss(
+  ctx: CanvasRenderingContext2D,
+  b: { x: number; y: number; t: number; hp: number; maxHp: number },
+  pattern: "radial" | "aimed" | "spiral" | "burst" | "fusion",
+  color: string,
+  ex: { beamT: number },
+) {
+  const x = Math.round(b.x), y = Math.round(b.y), t = b.t;
+  ctx.save();
+  if (pattern === "radial") {
+    // Radioactive Slime: blobby green slime with bubbling drips
+    ctx.shadowBlur = 30; ctx.shadowColor = color;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    for (let i=0;i<24;i++){
+      const a=(i/24)*Math.PI*2;
+      const r=42 + Math.sin(t*0.15 + i)*4;
+      const px=x+Math.cos(a)*r, py=y+Math.sin(a)*r*0.85;
+      i?ctx.lineTo(px,py):ctx.moveTo(px,py);
+    }
+    ctx.closePath(); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "#1a4a0a";
+    ctx.fillRect(x-22,y-6,10,10); ctx.fillRect(x+12,y-6,10,10);
+    ctx.fillStyle = "#fff"; ctx.fillRect(x-19,y-3,4,4); ctx.fillRect(x+15,y-3,4,4);
+    // drips
+    ctx.fillStyle = color;
+    for (let i=0;i<3;i++){
+      const dx = x-30+i*30, dy = y+30+Math.sin(t*0.2+i)*4;
+      ctx.beginPath(); ctx.arc(dx,dy,5,0,Math.PI*2); ctx.fill();
+    }
+  } else if (pattern === "aimed") {
+    // Molecule Titan: cluster of 3 bonded atoms
+    const offs = [[-30,0],[30,0],[0,-25]];
+    ctx.strokeStyle = "#fff176"; ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(x+offs[0][0], y+offs[0][1]); ctx.lineTo(x+offs[1][0], y+offs[1][1]);
+    ctx.moveTo(x+offs[0][0], y+offs[0][1]); ctx.lineTo(x+offs[2][0], y+offs[2][1]);
+    ctx.moveTo(x+offs[1][0], y+offs[1][1]); ctx.lineTo(x+offs[2][0], y+offs[2][1]);
+    ctx.stroke();
+    ctx.shadowBlur = 25; ctx.shadowColor = color;
+    for (let i=0;i<3;i++){
+      ctx.fillStyle = i===0?"#7df9ff":i===1?color:"#b388ff";
+      ctx.beginPath(); ctx.arc(x+offs[i][0], y+offs[i][1], 22+Math.sin(t*0.1+i)*2, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+    ctx.fillStyle="#000";
+    ctx.fillRect(x-2,y-2,6,6);
+  } else if (pattern === "spiral") {
+    // Plasma Robot: square mech with antenna + sweeping beam
+    ctx.shadowBlur = 20; ctx.shadowColor = color;
+    ctx.fillStyle = "#1a1a2a"; ctx.fillRect(x-40,y-30,80,60);
+    ctx.fillStyle = color; ctx.fillRect(x-36,y-26,72,52);
+    ctx.fillStyle = "#0a0a1a"; ctx.fillRect(x-28,y-18,56,20);
+    ctx.fillStyle = "#39ff14"; ctx.fillRect(x-22,y-14,12,12); ctx.fillRect(x+10,y-14,12,12);
+    ctx.fillStyle = "#fff"; ctx.fillRect(x-18,y-10,4,4); ctx.fillRect(x+14,y-10,4,4);
+    ctx.fillStyle = "#ff2e2e"; ctx.fillRect(x-30,y+8,60,6);
+    ctx.fillStyle = "#fff176"; ctx.fillRect(x-2,y-40,4,12);
+    ctx.fillRect(x-4,y-44,8,4);
+    ctx.shadowBlur = 0;
+    if (ex.beamT > 0) {
+      ctx.save();
+      ctx.translate(x,y);
+      ctx.rotate(Math.atan2(0,1) + Math.sin(t*0.1)*0.1);
+      ctx.fillStyle = "rgba(255,46,46,0.35)";
+      ctx.fillRect(0,-6, 600, 12);
+      ctx.fillStyle = "#ff2e2e";
+      ctx.fillRect(0,-2, 600, 4);
+      ctx.restore();
+    }
+  } else if (pattern === "burst") {
+    // Toxic Beast: spiky organic blob
+    ctx.shadowBlur = 28; ctx.shadowColor = color;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    for (let i=0;i<16;i++){
+      const a = (i/16)*Math.PI*2;
+      const r = (i%2===0?52:30) + Math.sin(t*0.2+i)*3;
+      const px=x+Math.cos(a)*r, py=y+Math.sin(a)*r;
+      i?ctx.lineTo(px,py):ctx.moveTo(px,py);
+    }
+    ctx.closePath(); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "#2a0010";
+    ctx.beginPath(); ctx.arc(x,y,22,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = "#fff176";
+    ctx.fillRect(x-12,y-6,8,8); ctx.fillRect(x+4,y-6,8,8);
+    ctx.fillStyle = "#000"; ctx.fillRect(x-9,y-3,3,3); ctx.fillRect(x+7,y-3,3,3);
+    ctx.fillStyle = "#fff"; ctx.fillRect(x-10,y+6,20,4);
+  } else {
+    // Fusion final boss: pulsing star with orbiting satellites
+    const pulse = 1 + Math.sin(t*0.15)*0.08;
+    ctx.shadowBlur = 40; ctx.shadowColor = color;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    for (let i=0;i<10;i++){
+      const a = (i/10)*Math.PI*2 - Math.PI/2;
+      const r = (i%2===0?50:22)*pulse;
+      const px=x+Math.cos(a)*r, py=y+Math.sin(a)*r;
+      i?ctx.lineTo(px,py):ctx.moveTo(px,py);
+    }
+    ctx.closePath(); ctx.fill();
+    ctx.shadowBlur = 50; ctx.shadowColor = "#fff";
+    ctx.fillStyle = "#fff";
+    ctx.beginPath(); ctx.arc(x,y,16*pulse,0,Math.PI*2); ctx.fill();
+    ctx.shadowBlur = 0;
+    // satellites
+    for (let i=0;i<2;i++){
+      const a = t*0.08 + i*Math.PI;
+      const sx = x+Math.cos(a)*60, sy = y+Math.sin(a)*60;
+      ctx.fillStyle = "#ff2e2e";
+      ctx.beginPath(); ctx.arc(sx,sy,8,0,Math.PI*2); ctx.fill();
+    }
+  }
+
+  // HP bar (always)
+  ctx.fillStyle = "#000"; ctx.fillRect(x-50, y-60, 100, 6);
+  ctx.fillStyle = "#ff2e2e"; ctx.fillRect(x-50, y-60, 100*(b.hp/b.maxHp), 6);
+  ctx.restore();
 }

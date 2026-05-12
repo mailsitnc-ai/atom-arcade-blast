@@ -16,6 +16,7 @@ export type LevelDef = {
     pattern: "radial" | "aimed" | "spiral" | "burst" | "fusion";
     intro: string;
   };
+  quiz: { q: string; choices: string[]; answer: number }[];
   learning: {
     headline: string;
     tagline: string;
@@ -34,6 +35,11 @@ export const LEVELS: LevelDef[] = [
     bgA: "#0a0628", bgB: "#1a0a4a",
     enemyColor: "#ff6ec7", enemySpeed: 1.2, enemyHp: 2,
     boss: { name: "Radioactive Slime", color: "#7CFC00", hp: 60, speed: 1.4, pattern: "radial", intro: "WARNING: UNSTABLE ISOTOPE" },
+    quiz: [
+      { q: "Which particle has a positive charge?", choices: ["Electron", "Proton", "Neutron"], answer: 1 },
+      { q: "Where are electrons found?", choices: ["In the nucleus", "Orbiting the nucleus", "Inside protons"], answer: 1 },
+      { q: "What charge does a neutron carry?", choices: ["Positive", "Negative", "Neutral (none)"], answer: 2 },
+    ],
     learning: {
       headline: "ATOMIC STRUCTURE",
       tagline: "Everything is made of atoms.",
@@ -54,6 +60,11 @@ export const LEVELS: LevelDef[] = [
     bgA: "#0d0233", bgB: "#2a0a55",
     enemyColor: "#ffb86c", enemySpeed: 1.5, enemyHp: 2,
     boss: { name: "Unstable Molecule Titan", color: "#ff5e94", hp: 90, speed: 1.6, pattern: "aimed", intro: "BOND OVERLOAD DETECTED" },
+    quiz: [
+      { q: "Which bond involves SHARING electrons?", choices: ["Ionic", "Covalent", "Metallic"], answer: 1 },
+      { q: "An ionic bond happens when atoms…", choices: ["Share electrons equally", "Transfer electrons", "Ignore each other"], answer: 1 },
+      { q: "Metallic bonds are best described as…", choices: ["A sea of free electrons", "Two atoms holding hands", "No electrons at all"], answer: 0 },
+    ],
     learning: {
       headline: "CHEMICAL BONDING",
       tagline: "Atoms hold hands to form molecules.",
@@ -74,6 +85,11 @@ export const LEVELS: LevelDef[] = [
     bgA: "#04231a", bgB: "#0a4a2e",
     enemyColor: "#39ff14", enemySpeed: 1.8, enemyHp: 3,
     boss: { name: "Plasma Reactor Robot", color: "#00e5ff", hp: 130, speed: 1.8, pattern: "spiral", intro: "pH CRITICAL — CORROSIVE MODE" },
+    quiz: [
+      { q: "Pure water has a pH of…", choices: ["1", "7", "14"], answer: 1 },
+      { q: "Acids release which ion?", choices: ["H⁺", "OH⁻", "Na⁺"], answer: 0 },
+      { q: "A pH of 12 means the substance is…", choices: ["Strongly acidic", "Neutral", "Strongly basic"], answer: 2 },
+    ],
     learning: {
       headline: "ACIDS & BASES",
       tagline: "From sour lemons to slippery soap.",
@@ -94,6 +110,11 @@ export const LEVELS: LevelDef[] = [
     bgA: "#22041a", bgB: "#5a0a3a",
     enemyColor: "#ff3df0", enemySpeed: 2.1, enemyHp: 3,
     boss: { name: "Toxic Mutation Beast", color: "#ff2e2e", hp: 180, speed: 2.0, pattern: "burst", intro: "EXOTHERMIC RAGE INCOMING" },
+    quiz: [
+      { q: "What are the starting materials called?", choices: ["Products", "Reactants", "Catalysts"], answer: 1 },
+      { q: "An exothermic reaction…", choices: ["Absorbs energy", "Releases energy", "Does neither"], answer: 1 },
+      { q: "In a reaction, atoms are…", choices: ["Created", "Destroyed", "Rearranged"], answer: 2 },
+    ],
     learning: {
       headline: "CHEMICAL REACTIONS",
       tagline: "Atoms rearrange into new substances.",
@@ -114,6 +135,11 @@ export const LEVELS: LevelDef[] = [
     bgA: "#2a1a04", bgB: "#5a3a0a",
     enemyColor: "#fff176", enemySpeed: 2.4, enemyHp: 4,
     boss: { name: "Fusion-Core Final Boss", color: "#ffe600", hp: 260, speed: 2.2, pattern: "fusion", intro: "STELLAR CORE IGNITED" },
+    quiz: [
+      { q: "Rows on the periodic table are called…", choices: ["Groups", "Periods", "Families"], answer: 1 },
+      { q: "Fusion combines small atoms into…", choices: ["Smaller atoms", "Bigger atoms + energy", "Pure light only"], answer: 1 },
+      { q: "The Sun mainly fuses…", choices: ["Carbon → Iron", "Hydrogen → Helium", "Oxygen → Neon"], answer: 1 },
+    ],
     learning: {
       headline: "PERIODIC TABLE & FUSION",
       tagline: "118 elements. Infinite possibilities.",
