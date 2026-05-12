@@ -7,6 +7,7 @@ import { loadLB, saveLB, type LBEntry } from "./game/leaderboard";
 type Phase = "menu" | "learn-intro" | "play" | "learn-recap" | "gameover" | "leaderboard" | "victory";
 type V = { x: number; y: number };
 type Bullet = V & { vx: number; vy: number; dmg: number; life: number };
+type PBullet = Bullet & { seek?: boolean; split?: number; trail?: string };
 type Enemy = V & { hp: number; cd: number; vx: number; vy: number };
 type Atom = V & { taken: boolean; symbol: string; pulse: number };
 type Particle = V & { vx: number; vy: number; life: number; color: string };
@@ -299,18 +300,55 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
 
   const fire = useCallback(() => {
     const s = stateRef.current; if (!s) return;
-    if (s.lastShot && performance.now() - s.lastShot < 120) return;
+    const cooldown = level.id === 2 ? 260 : level.id === 3 ? 180 : level.id === 5 ? 200 : 140;
+    if (s.lastShot && performance.now() - s.lastShot < cooldown) return;
     if (!s.unlimited && s.ammo <= 0) return;
     s.lastShot = performance.now();
     if (!s.unlimited) s.ammo--;
-    const dx = s.mouse.x - s.player.x, dy = s.mouse.y - s.player.y;
+    const px = s.player.x, py = s.player.y;
+    const dx = s.mouse.x - px, dy = s.mouse.y - py;
     const d = Math.hypot(dx,dy) || 1;
-    s.bullets.push({
-      x: s.player.x, y: s.player.y,
-      vx: (dx/d)*level.weapon.speed, vy: (dy/d)*level.weapon.speed,
-      dmg: level.weapon.damage + Math.floor(s.atomsCollected/3),
-      life: 90,
+    const aim = Math.atan2(dy, dx);
+    const sp = level.weapon.speed;
+    const dmg = level.weapon.damage + Math.floor(s.atomsCollected/3);
+    const mk = (vx: number, vy: number, extra: Partial<PBullet> = {}): PBullet => ({
+      x: px, y: py, vx, vy, dmg, life: 90, ...extra,
     });
+    switch (level.id) {
+      case 1: { // straight beam
+        s.bullets.push(mk((dx/d)*sp, (dy/d)*sp));
+        break;
+      }
+      case 2: { // shield: 8 bullets fired outward in all directions
+        for (let i = 0; i < 8; i++) {
+          const a = (i/8)*Math.PI*2 + s.time*0.02;
+          s.bullets.push(mk(Math.cos(a)*sp*0.85, Math.sin(a)*sp*0.85, { life: 70 }));
+        }
+        break;
+      }
+      case 3: { // spray: 5-bullet cone toward mouse
+        for (let i = -2; i <= 2; i++) {
+          const a = aim + i * 0.18;
+          s.bullets.push(mk(Math.cos(a)*sp, Math.sin(a)*sp, { life: 80 }));
+        }
+        break;
+      }
+      case 4: { // homing chain: 3 seeking bullets
+        for (let i = -1; i <= 1; i++) {
+          const a = aim + i * 0.35;
+          s.bullets.push(mk(Math.cos(a)*sp*0.8, Math.sin(a)*sp*0.8, { seek: true, life: 110 }));
+        }
+        break;
+      }
+      case 5: { // fusion orb: heavy splitting projectile + 2 orbiters
+        s.bullets.push(mk(Math.cos(aim)*sp, Math.sin(aim)*sp, { split: 2, life: 90 }));
+        for (let i = 0; i < 2; i++) {
+          const a = aim + (i ? Math.PI/2 : -Math.PI/2);
+          s.bullets.push(mk(Math.cos(a)*sp*0.6, Math.sin(a)*sp*0.6, { life: 50 }));
+        }
+        break;
+      }
+    }
     sfx("shoot");
   }, [level]);
 
@@ -359,10 +397,35 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
       if (s.comboT > 0) s.comboT--; else if (s.combo > 0) s.combo = 0;
 
       // Bullets
-      s.bullets = s.bullets.filter((b: Bullet) => {
+      const newBullets: PBullet[] = [];
+      s.bullets = s.bullets.filter((b: PBullet) => {
+        if (b.seek && s.enemies.length) {
+          // find nearest live enemy
+          let nearest: Enemy | null = null, nd = 1e9;
+          for (const en of s.enemies) {
+            if (en.hp <= 0) continue;
+            const dd = (en.x-b.x)*(en.x-b.x) + (en.y-b.y)*(en.y-b.y);
+            if (dd < nd) { nd = dd; nearest = en; }
+          }
+          if (nearest) {
+            const ax = nearest.x - b.x, ay = nearest.y - b.y, ad = Math.hypot(ax, ay) || 1;
+            b.vx += (ax/ad) * 0.6; b.vy += (ay/ad) * 0.6;
+            const sp2 = Math.hypot(b.vx, b.vy), max = level.weapon.speed;
+            if (sp2 > max) { b.vx = b.vx/sp2*max; b.vy = b.vy/sp2*max; }
+          }
+        }
         b.x += b.vx; b.y += b.vy; b.life--;
+        if (b.split && b.life === 40) {
+          // split into 3 mini-bullets
+          for (let i = -1; i <= 1; i++) {
+            const a = Math.atan2(b.vy, b.vx) + i * 0.4;
+            newBullets.push({ x: b.x, y: b.y, vx: Math.cos(a)*level.weapon.speed*0.9, vy: Math.sin(a)*level.weapon.speed*0.9, dmg: Math.max(1, b.dmg-1), life: 50 });
+          }
+          b.split = 0;
+        }
         return b.life > 0 && b.x > -10 && b.x < W+10 && b.y > -10 && b.y < H+10;
       });
+      if (newBullets.length) s.bullets.push(...newBullets);
       s.eBullets = s.eBullets.filter((b: Bullet) => {
         b.x += b.vx; b.y += b.vy; b.life--;
         if (Math.hypot(b.x-p.x, b.y-p.y) < 14 && p.iframes <= 0) {
@@ -647,16 +710,27 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
 
       ctx.restore();
 
-      onHud.current!({
-        ammo: s.ammo,
-        atomsCollected: s.atomsCollected,
-        enemiesLeft: s.enemies.length,
-        unlimited: s.unlimited,
-        bossActive: !!s.boss && s.boss.introT <= 0,
-        bossHp: s.boss?.hp ?? 0,
-        bossMax: s.boss?.maxHp ?? 0,
-        weapon: level.weapon.name,
-      });
+      // Throttle HUD updates to ~10fps to prevent React re-render lag
+      if ((s.time & 5) === 0) {
+        const next = {
+          ammo: s.ammo,
+          atomsCollected: s.atomsCollected,
+          enemiesLeft: s.enemies.length,
+          unlimited: s.unlimited,
+          bossActive: !!s.boss && s.boss.introT <= 0,
+          bossHp: s.boss?.hp ?? 0,
+          bossMax: s.boss?.maxHp ?? 0,
+          weapon: level.weapon.name,
+        };
+        const prev = s.hudCache;
+        if (!prev || prev.ammo !== next.ammo || prev.atomsCollected !== next.atomsCollected
+            || prev.enemiesLeft !== next.enemiesLeft || prev.unlimited !== next.unlimited
+            || prev.bossActive !== next.bossActive || prev.bossHp !== next.bossHp
+            || prev.weapon !== next.weapon) {
+          s.hudCache = next;
+          onHud.current!(next);
+        }
+      }
 
       raf = requestAnimationFrame(loop);
     };
