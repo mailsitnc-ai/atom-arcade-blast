@@ -113,9 +113,16 @@ export default function ChemistryGame() {
               level={LEVELS[levelIdx]}
               mode={phase === "learn-intro" ? "intro" : "recap"}
               onContinue={() => {
-                if (phase === "learn-intro") setPhase("play");
+                if (phase === "learn-intro") setPhase("quiz");
                 else { setLevelIdx(i => i + 1); setPhase("learn-intro"); }
               }}
+            />
+          )}
+          {phase === "quiz" && (
+            <QuizScreen
+              level={LEVELS[levelIdx]}
+              onPass={(c) => { setScore(s => s + c * 75); sfx("win"); setPhase("play"); }}
+              onFail={() => { sfx("die"); setPhase("learn-intro"); }}
             />
           )}
           {phase === "gameover" && (
