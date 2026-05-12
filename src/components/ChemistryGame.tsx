@@ -1,17 +1,18 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { LEVELS } from "./game/levels";
 import LearningScreen from "./game/LearningScreen";
+import QuizScreen from "./game/QuizScreen";
 import { sfx } from "./game/sound";
 import { loadLB, saveLB, type LBEntry } from "./game/leaderboard";
 
-type Phase = "menu" | "learn-intro" | "play" | "learn-recap" | "gameover" | "leaderboard" | "victory";
+type Phase = "menu" | "learn-intro" | "quiz" | "play" | "learn-recap" | "gameover" | "leaderboard" | "victory";
 type V = { x: number; y: number };
 type Bullet = V & { vx: number; vy: number; dmg: number; life: number };
 type PBullet = Bullet & { seek?: boolean; split?: number; trail?: string };
 type Enemy = V & { hp: number; cd: number; vx: number; vy: number };
 type Atom = V & { taken: boolean; symbol: string; pulse: number };
 type Particle = V & { vx: number; vy: number; life: number; color: string };
-type Boss = { x: number; y: number; hp: number; maxHp: number; phase: number; cd: number; t: number; introT: number };
+type Boss = { x: number; y: number; hp: number; maxHp: number; phase: number; cd: number; t: number; introT: number; specialCd: number; dashT: number };
 
 const W = 800, H = 500;
 const SYMBOLS = ["H", "He", "Li", "C", "N", "O", "Na", "Fe"];
