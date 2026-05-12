@@ -863,3 +863,124 @@ function spawnParticles(s: any, x: number, y: number, color: string, n: number) 
     s.particles.push({ x, y, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp, life: 20+Math.random()*15, color });
   }
 }
+
+function drawBoss(
+  ctx: CanvasRenderingContext2D,
+  b: { x: number; y: number; t: number; hp: number; maxHp: number },
+  pattern: "radial" | "aimed" | "spiral" | "burst" | "fusion",
+  color: string,
+  ex: { beamT: number },
+) {
+  const x = Math.round(b.x), y = Math.round(b.y), t = b.t;
+  ctx.save();
+  if (pattern === "radial") {
+    // Radioactive Slime: blobby green slime with bubbling drips
+    ctx.shadowBlur = 30; ctx.shadowColor = color;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    for (let i=0;i<24;i++){
+      const a=(i/24)*Math.PI*2;
+      const r=42 + Math.sin(t*0.15 + i)*4;
+      const px=x+Math.cos(a)*r, py=y+Math.sin(a)*r*0.85;
+      i?ctx.lineTo(px,py):ctx.moveTo(px,py);
+    }
+    ctx.closePath(); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "#1a4a0a";
+    ctx.fillRect(x-22,y-6,10,10); ctx.fillRect(x+12,y-6,10,10);
+    ctx.fillStyle = "#fff"; ctx.fillRect(x-19,y-3,4,4); ctx.fillRect(x+15,y-3,4,4);
+    // drips
+    ctx.fillStyle = color;
+    for (let i=0;i<3;i++){
+      const dx = x-30+i*30, dy = y+30+Math.sin(t*0.2+i)*4;
+      ctx.beginPath(); ctx.arc(dx,dy,5,0,Math.PI*2); ctx.fill();
+    }
+  } else if (pattern === "aimed") {
+    // Molecule Titan: cluster of 3 bonded atoms
+    const offs = [[-30,0],[30,0],[0,-25]];
+    ctx.strokeStyle = "#fff176"; ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(x+offs[0][0], y+offs[0][1]); ctx.lineTo(x+offs[1][0], y+offs[1][1]);
+    ctx.moveTo(x+offs[0][0], y+offs[0][1]); ctx.lineTo(x+offs[2][0], y+offs[2][1]);
+    ctx.moveTo(x+offs[1][0], y+offs[1][1]); ctx.lineTo(x+offs[2][0], y+offs[2][1]);
+    ctx.stroke();
+    ctx.shadowBlur = 25; ctx.shadowColor = color;
+    for (let i=0;i<3;i++){
+      ctx.fillStyle = i===0?"#7df9ff":i===1?color:"#b388ff";
+      ctx.beginPath(); ctx.arc(x+offs[i][0], y+offs[i][1], 22+Math.sin(t*0.1+i)*2, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+    ctx.fillStyle="#000";
+    ctx.fillRect(x-2,y-2,6,6);
+  } else if (pattern === "spiral") {
+    // Plasma Robot: square mech with antenna + sweeping beam
+    ctx.shadowBlur = 20; ctx.shadowColor = color;
+    ctx.fillStyle = "#1a1a2a"; ctx.fillRect(x-40,y-30,80,60);
+    ctx.fillStyle = color; ctx.fillRect(x-36,y-26,72,52);
+    ctx.fillStyle = "#0a0a1a"; ctx.fillRect(x-28,y-18,56,20);
+    ctx.fillStyle = "#39ff14"; ctx.fillRect(x-22,y-14,12,12); ctx.fillRect(x+10,y-14,12,12);
+    ctx.fillStyle = "#fff"; ctx.fillRect(x-18,y-10,4,4); ctx.fillRect(x+14,y-10,4,4);
+    ctx.fillStyle = "#ff2e2e"; ctx.fillRect(x-30,y+8,60,6);
+    ctx.fillStyle = "#fff176"; ctx.fillRect(x-2,y-40,4,12);
+    ctx.fillRect(x-4,y-44,8,4);
+    ctx.shadowBlur = 0;
+    if (ex.beamT > 0) {
+      ctx.save();
+      ctx.translate(x,y);
+      ctx.rotate(Math.atan2(0,1) + Math.sin(t*0.1)*0.1);
+      ctx.fillStyle = "rgba(255,46,46,0.35)";
+      ctx.fillRect(0,-6, 600, 12);
+      ctx.fillStyle = "#ff2e2e";
+      ctx.fillRect(0,-2, 600, 4);
+      ctx.restore();
+    }
+  } else if (pattern === "burst") {
+    // Toxic Beast: spiky organic blob
+    ctx.shadowBlur = 28; ctx.shadowColor = color;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    for (let i=0;i<16;i++){
+      const a = (i/16)*Math.PI*2;
+      const r = (i%2===0?52:30) + Math.sin(t*0.2+i)*3;
+      const px=x+Math.cos(a)*r, py=y+Math.sin(a)*r;
+      i?ctx.lineTo(px,py):ctx.moveTo(px,py);
+    }
+    ctx.closePath(); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "#2a0010";
+    ctx.beginPath(); ctx.arc(x,y,22,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = "#fff176";
+    ctx.fillRect(x-12,y-6,8,8); ctx.fillRect(x+4,y-6,8,8);
+    ctx.fillStyle = "#000"; ctx.fillRect(x-9,y-3,3,3); ctx.fillRect(x+7,y-3,3,3);
+    ctx.fillStyle = "#fff"; ctx.fillRect(x-10,y+6,20,4);
+  } else {
+    // Fusion final boss: pulsing star with orbiting satellites
+    const pulse = 1 + Math.sin(t*0.15)*0.08;
+    ctx.shadowBlur = 40; ctx.shadowColor = color;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    for (let i=0;i<10;i++){
+      const a = (i/10)*Math.PI*2 - Math.PI/2;
+      const r = (i%2===0?50:22)*pulse;
+      const px=x+Math.cos(a)*r, py=y+Math.sin(a)*r;
+      i?ctx.lineTo(px,py):ctx.moveTo(px,py);
+    }
+    ctx.closePath(); ctx.fill();
+    ctx.shadowBlur = 50; ctx.shadowColor = "#fff";
+    ctx.fillStyle = "#fff";
+    ctx.beginPath(); ctx.arc(x,y,16*pulse,0,Math.PI*2); ctx.fill();
+    ctx.shadowBlur = 0;
+    // satellites
+    for (let i=0;i<2;i++){
+      const a = t*0.08 + i*Math.PI;
+      const sx = x+Math.cos(a)*60, sy = y+Math.sin(a)*60;
+      ctx.fillStyle = "#ff2e2e";
+      ctx.beginPath(); ctx.arc(sx,sy,8,0,Math.PI*2); ctx.fill();
+    }
+  }
+
+  // HP bar (always)
+  ctx.fillStyle = "#000"; ctx.fillRect(x-50, y-60, 100, 6);
+  ctx.fillStyle = "#ff2e2e"; ctx.fillRect(x-50, y-60, 100*(b.hp/b.maxHp), 6);
+  ctx.restore();
+}
