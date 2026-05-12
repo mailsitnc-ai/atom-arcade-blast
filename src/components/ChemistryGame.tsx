@@ -25,6 +25,13 @@ export default function ChemistryGame() {
   const [nameInput, setNameInput] = useState("AAA");
   const [hud, setHud] = useState({ ammo: 10, atomsCollected: 0, enemiesLeft: 8, unlimited: false, bossHp: 0, bossMax: 0, bossActive: false, weapon: "" });
 
+  // Stable callback refs so PlayCanvas effect doesn't re-init every frame
+  const onCompleteRef = useRef<() => void>(() => {});
+  const onDeathRef = useRef<() => void>(() => {});
+  const onScoreRef = useRef<(n: number) => void>(() => {});
+  const onStatRef = useRef<(k: any, v?: number) => void>(() => {});
+  const onHudRef = useRef<(h: any) => void>(() => {});
+
   useEffect(() => { setLb(loadLB()); }, []);
 
   const startGame = () => {
@@ -56,6 +63,17 @@ export default function ChemistryGame() {
     }
   };
 
+  // Refresh refs every render so PlayCanvas always calls the latest closures
+  onCompleteRef.current = onLevelComplete;
+  onDeathRef.current = onPlayerDied;
+  onScoreRef.current = (d: number) => setScore(s => s + d);
+  onStatRef.current = (k: any, v: number = 1) => setStats(s => {
+    const next = { ...s, [k]: (s as any)[k] + v };
+    if (k === "combo") next.maxCombo = Math.max(s.maxCombo, next.combo);
+    return next;
+  });
+  onHudRef.current = setHud;
+
   const submitScore = () => {
     const entry: LBEntry = {
       name: nameInput.toUpperCase().slice(0,8) || "???",
@@ -78,15 +96,11 @@ export default function ChemistryGame() {
           {phase === "play" && (
             <PlayCanvas
               level={LEVELS[levelIdx]}
-              onComplete={onLevelComplete}
-              onDeath={onPlayerDied}
-              onScore={(d) => setScore(s => s + d)}
-              onStat={(k, v=1) => setStats(s => {
-                const next = { ...s, [k]: (s as any)[k] + v };
-                if (k === "combo") next.maxCombo = Math.max(s.maxCombo, next.combo);
-                return next;
-              })}
-              onHud={setHud}
+              onComplete={onCompleteRef}
+              onDeath={onDeathRef}
+              onScore={onScoreRef}
+              onStat={onStatRef}
+              onHud={onHudRef}
             />
           )}
           {phase === "menu" && (
@@ -238,11 +252,11 @@ function Leaderboard({ lb, onBack }: { lb: LBEntry[]; onBack: () => void }) {
 
 function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
   level: typeof LEVELS[number];
-  onComplete: () => void;
-  onDeath: () => void;
-  onScore: (n: number) => void;
-  onStat: (k: "enemies"|"atoms"|"combo"|"maxCombo", v?: number) => void;
-  onHud: (h: any) => void;
+  onComplete: React.RefObject<() => void>;
+  onDeath: React.RefObject<() => void>;
+  onScore: React.RefObject<(n: number) => void>;
+  onStat: React.RefObject<(k: "enemies"|"atoms"|"combo"|"maxCombo", v?: number) => void>;
+  onHud: React.RefObject<(h: any) => void>;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const stateRef = useRef<any>(null);
@@ -353,7 +367,7 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
         b.x += b.vx; b.y += b.vy; b.life--;
         if (Math.hypot(b.x-p.x, b.y-p.y) < 14 && p.iframes <= 0) {
           p.hp--; p.iframes = 60; s.shake = 12; sfx("hit");
-          if (p.hp <= 0 && !dead) { dead = true; setTimeout(onDeath, 200); }
+          if (p.hp <= 0 && !dead) { dead = true; setTimeout(onDeath.current!, 200); }
           return false;
         }
         return b.life > 0 && b.x > 0 && b.x < W && b.y > 0 && b.y < H;
@@ -377,7 +391,7 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
         // collide w/ player
         if (Math.hypot(e.x-p.x, e.y-p.y) < 22 && p.iframes <= 0) {
           p.hp--; p.iframes = 60; s.shake = 8; sfx("hit");
-          if (p.hp <= 0 && !dead) { dead = true; setTimeout(onDeath, 200); }
+          if (p.hp <= 0 && !dead) { dead = true; setTimeout(onDeath.current!, 200); }
         }
         // bullets hit enemy
         for (const b of s.bullets) {
@@ -386,9 +400,9 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
             spawnParticles(s, e.x, e.y, level.enemyColor, 6);
             if (e.hp <= 0) {
               s.combo++; s.comboT = 90;
-              onStat("combo", 1);
+              onStat.current!("combo", 1);
               const bonus = 100 + s.combo*10;
-              onScore(bonus); onStat("enemies", 1);
+              onScore.current!(bonus); onStat.current!("enemies", 1);
               spawnParticles(s, e.x, e.y, "#fff176", 16);
               if (s.combo >= 3) sfx("combo");
               sfx("hit");
@@ -404,7 +418,7 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
         a.pulse += 0.1;
         if (Math.hypot(a.x-p.x, a.y-p.y) < 20) {
           a.taken = true; s.atomsCollected++;
-          s.ammo += 5; onScore(50); onStat("atoms", 1);
+          s.ammo += 5; onScore.current!(50); onStat.current!("atoms", 1);
           spawnParticles(s, a.x, a.y, "#0ff", 20);
           sfx("atom");
           if (s.atomsCollected >= 8 && !s.unlimited) {
@@ -468,11 +482,11 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
             if (Math.hypot(bl.x-b.x, bl.y-b.y) < 50) {
               b.hp -= bl.dmg; bl.life = 0;
               spawnParticles(s, bl.x, bl.y, level.boss.color, 4);
-              onScore(20);
+              onScore.current!(20);
               if (b.hp <= 0) {
                 spawnParticles(s, b.x, b.y, "#fff176", 60);
                 s.shake = 25; s.bossDefeated = true; s.boss = null;
-                setTimeout(onComplete, 800);
+                setTimeout(onComplete.current!, 800);
                 break;
               }
             }
@@ -480,7 +494,7 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
           // touch
           if (Math.hypot(b.x-p.x, b.y-p.y) < 55 && p.iframes<=0) {
             p.hp -= 2; p.iframes = 70; s.shake = 14; sfx("hit");
-            if (p.hp <= 0 && !dead) { dead = true; setTimeout(onDeath, 200); }
+            if (p.hp <= 0 && !dead) { dead = true; setTimeout(onDeath.current!, 200); }
           }
         }
       }
@@ -498,37 +512,58 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
       const sk = s.shake|0;
       ctx.translate((Math.random()-0.5)*sk, (Math.random()-0.5)*sk);
 
-      // bg
-      const grad = ctx.createLinearGradient(0,0,0,H);
-      grad.addColorStop(0, level.bgA); grad.addColorStop(1, level.bgB);
-      ctx.fillStyle = grad; ctx.fillRect(0,0,W,H);
+      // bg — flat dark navy lab grid
+      ctx.fillStyle = "#06182a"; ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle = "rgba(64,224,208,0.22)"; ctx.lineWidth = 1;
+      for (let x=0;x<=W;x+=24) { ctx.beginPath(); ctx.moveTo(x+0.5,0); ctx.lineTo(x+0.5,H); ctx.stroke(); }
+      for (let y=0;y<=H;y+=24) { ctx.beginPath(); ctx.moveTo(0,y+0.5); ctx.lineTo(W,y+0.5); ctx.stroke(); }
+      // bright frame edges
+      ctx.strokeStyle = "#22e0d0"; ctx.lineWidth = 3;
+      ctx.strokeRect(1.5,1.5,W-3,H-3);
 
-      // grid
-      ctx.strokeStyle = "rgba(0,255,255,0.08)"; ctx.lineWidth = 1;
-      for (let x=0;x<W;x+=40) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
-      for (let y=0;y<H;y+=40) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
-
-      // atoms
+      // atoms — orbital rings around glowing nucleus
       for (const a of s.atoms) {
         if (a.taken) continue;
-        const r = 12 + Math.sin(a.pulse)*3;
-        ctx.shadowBlur = 20; ctx.shadowColor = "#0ff";
-        ctx.fillStyle = "#0ff"; ctx.beginPath(); ctx.arc(a.x, a.y, r, 0, Math.PI*2); ctx.fill();
+        ctx.save();
+        ctx.translate(a.x, a.y);
+        ctx.shadowBlur = 14; ctx.shadowColor = "#22e0d0";
+        ctx.strokeStyle = "#22e0d0"; ctx.lineWidth = 2;
+        // two crossed elliptical orbits
+        for (let k=0;k<2;k++) {
+          ctx.save();
+          ctx.rotate(a.pulse*0.6 + k*Math.PI/2);
+          ctx.beginPath(); ctx.ellipse(0,0,16,7,0,0,Math.PI*2); ctx.stroke();
+          ctx.restore();
+        }
+        // nucleus
         ctx.shadowBlur = 0;
-        ctx.fillStyle = "#000"; ctx.font = "bold 10px monospace"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        ctx.fillText(a.symbol, a.x, a.y);
+        ctx.fillStyle = "#eafffb"; ctx.fillRect(-4,-4,8,8);
+        ctx.fillStyle = "#22e0d0"; ctx.fillRect(-2,-2,4,4);
+        ctx.restore();
       }
 
-      // enemies
+      // enemies — red 8-bit pixel monsters
       for (const e of s.enemies) {
-        ctx.shadowBlur = 12; ctx.shadowColor = level.enemyColor;
-        ctx.fillStyle = level.enemyColor;
-        ctx.fillRect(e.x-12, e.y-12, 24, 24);
+        const ex = Math.round(e.x), ey = Math.round(e.y);
         ctx.shadowBlur = 0;
-        ctx.fillStyle = "#000"; ctx.fillRect(e.x-6, e.y-4, 3,3); ctx.fillRect(e.x+3, e.y-4, 3,3);
+        // body
+        ctx.fillStyle = "#ff2e3a";
+        ctx.fillRect(ex-10, ey-12, 20, 22);
+        // ear bumps
+        ctx.fillRect(ex-10, ey-14, 4, 2);
+        ctx.fillRect(ex+6, ey-14, 4, 2);
+        // dark shadow strip
+        ctx.fillStyle = "#a8121c";
+        ctx.fillRect(ex-10, ey+6, 20, 4);
+        // eyes
+        ctx.fillStyle = "#fff"; ctx.fillRect(ex-7, ey-6, 5, 5); ctx.fillRect(ex+2, ey-6, 5, 5);
+        ctx.fillStyle = "#000"; ctx.fillRect(ex-6, ey-5, 2, 2); ctx.fillRect(ex+3, ey-5, 2, 2);
+        // teeth
+        ctx.fillStyle = "#fff"; ctx.fillRect(ex-6, ey+1, 12, 4);
+        ctx.fillStyle = "#a8121c"; ctx.fillRect(ex-3, ey+1, 2, 4); ctx.fillRect(ex+1, ey+1, 2, 4);
         // hp bar
-        ctx.fillStyle = "#000"; ctx.fillRect(e.x-12, e.y-18, 24, 3);
-        ctx.fillStyle = "#39ff14"; ctx.fillRect(e.x-12, e.y-18, 24*(e.hp/level.enemyHp), 3);
+        ctx.fillStyle = "#000"; ctx.fillRect(ex-10, ey-18, 20, 3);
+        ctx.fillStyle = "#39ff14"; ctx.fillRect(ex-10, ey-18, 20*(e.hp/level.enemyHp), 3);
       }
 
       // boss
@@ -576,18 +611,30 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
       }
       ctx.globalAlpha = 1;
 
-      // player
+      // player — white pixel scientist with green visor + cyan sword
       const blink = p.iframes>0 && (p.iframes%6<3);
       if (!blink) {
-        ctx.shadowBlur = 16; ctx.shadowColor = "#0ff";
-        ctx.fillStyle = "#0ff";
-        ctx.fillRect(p.x-12, p.y-12, 24, 24);
-        ctx.fillStyle = "#fff176";
-        ctx.fillRect(p.x-4, p.y-4, 8, 8);
-        // hp
+        const px = Math.round(p.x), py = Math.round(p.y);
         ctx.shadowBlur = 0;
-        ctx.fillStyle = "#000"; ctx.fillRect(p.x-15, p.y-22, 30, 4);
-        ctx.fillStyle = "#ff2e2e"; ctx.fillRect(p.x-15, p.y-22, 30*(p.hp/3), 4);
+        // body
+        ctx.fillStyle = "#f5f7fb"; ctx.fillRect(px-10, py-10, 20, 20);
+        // shadow underside
+        ctx.fillStyle = "#b9c0cc"; ctx.fillRect(px-10, py+6, 20, 4);
+        // green visor eyes
+        ctx.fillStyle = "#39ff14"; ctx.fillRect(px-6, py-7, 4, 4); ctx.fillRect(px+2, py-7, 4, 4);
+        // antenna
+        ctx.fillStyle = "#39ff14"; ctx.fillRect(px-1, py-14, 2, 4);
+        // sword pointing toward mouse
+        const a = Math.atan2(s.mouse.y-py, s.mouse.x-px);
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.rotate(a);
+        ctx.fillStyle = "#22e0d0"; ctx.fillRect(8, -2, 18, 4);
+        ctx.fillStyle = "#eafffb"; ctx.fillRect(22, -1, 4, 2);
+        ctx.restore();
+        // hp
+        ctx.fillStyle = "#000"; ctx.fillRect(px-15, py-20, 30, 4);
+        ctx.fillStyle = "#ff2e2e"; ctx.fillRect(px-15, py-20, 30*(p.hp/3), 4);
       }
 
       // combo
@@ -600,7 +647,7 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
 
       ctx.restore();
 
-      onHud({
+      onHud.current!({
         ammo: s.ammo,
         atomsCollected: s.atomsCollected,
         enemiesLeft: s.enemies.length,
@@ -622,7 +669,8 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
       cvs.removeEventListener("mousemove", onMove);
       cvs.removeEventListener("mousedown", onDown);
     };
-  }, [level, fire, onComplete, onDeath, onHud, onScore, onStat]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [level.id]);
 
   return (
     <canvas
