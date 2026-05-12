@@ -23,7 +23,6 @@ export type LevelDef = {
     analogy: string;
     diagram: "atom" | "bond" | "ph" | "reaction" | "periodic";
   };
-  quiz: { q: string; choices: string[]; answer: number }[];
 };
 
 export const LEVELS: LevelDef[] = [
@@ -46,11 +45,6 @@ export const LEVELS: LevelDef[] = [
       analogy: "Think of an atom like a tiny solar system: nucleus = sun, electrons = planets.",
       diagram: "atom",
     },
-    quiz: [
-      { q: "Where do protons live?", choices: ["In orbits", "In the nucleus", "Outside the atom"], answer: 1 },
-      { q: "Which particle has a negative charge?", choices: ["Proton", "Neutron", "Electron"], answer: 2 },
-      { q: "An atom is mostly…", choices: ["Solid metal", "Empty space", "Pure energy"], answer: 1 },
-    ],
   },
   {
     id: 2,
@@ -71,11 +65,6 @@ export const LEVELS: LevelDef[] = [
       analogy: "Bonds are like LEGO clicks between atoms — sharing or trading bricks.",
       diagram: "bond",
     },
-    quiz: [
-      { q: "Covalent bonds involve atoms that…", choices: ["Share electrons", "Trade electrons", "Ignore each other"], answer: 0 },
-      { q: "Ionic bonds form when one atom…", choices: ["Shares an electron", "Gives an electron away", "Steals a proton"], answer: 1 },
-      { q: "Metallic bonds feature…", choices: ["A sea of electrons", "Locked electrons", "No electrons"], answer: 0 },
-    ],
   },
   {
     id: 3,
@@ -96,11 +85,6 @@ export const LEVELS: LevelDef[] = [
       analogy: "pH scale = volume knob: low = sour acid, mid = water, high = soapy base.",
       diagram: "ph",
     },
-    quiz: [
-      { q: "Acids release which ion?", choices: ["OH-", "H+", "Na+"], answer: 1 },
-      { q: "Pure water has a pH of…", choices: ["0", "7", "14"], answer: 1 },
-      { q: "A pH of 12 is…", choices: ["Strong acid", "Neutral", "Strong base"], answer: 2 },
-    ],
   },
   {
     id: 4,
@@ -121,11 +105,6 @@ export const LEVELS: LevelDef[] = [
       analogy: "Like baking: flour + eggs → cake. The pieces re-arrange into something new.",
       diagram: "reaction",
     },
-    quiz: [
-      { q: "What you start with is called…", choices: ["Products", "Reactants", "Catalysts"], answer: 1 },
-      { q: "An exothermic reaction…", choices: ["Absorbs energy", "Releases energy", "Stores nothing"], answer: 1 },
-      { q: "In a reaction, atoms are…", choices: ["Created", "Destroyed", "Rearranged"], answer: 2 },
-    ],
   },
   {
     id: 5,
@@ -146,10 +125,5 @@ export const LEVELS: LevelDef[] = [
       analogy: "The Sun fuses Hydrogen into Helium — that's how stars shine.",
       diagram: "periodic",
     },
-    quiz: [
-      { q: "Columns in the periodic table are called…", choices: ["Periods", "Groups", "Shells"], answer: 1 },
-      { q: "Fusion combines small atoms into…", choices: ["Smaller atoms", "Bigger atoms + energy", "Nothing"], answer: 1 },
-      { q: "Stars shine because of…", choices: ["Fission", "Combustion", "Fusion"], answer: 2 },
-    ],
   },
 ];
