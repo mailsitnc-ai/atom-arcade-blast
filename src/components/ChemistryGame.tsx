@@ -301,6 +301,8 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
       mouse: { x: W/2, y: 0, down: false },
       boss: null as Boss | null,
       bossDefeated: false,
+      portal: null as { x: number; y: number; t: number } | null,
+      bossExtra: { dashCd: 0, minionCd: 0, beamCd: 0, beamT: 0 },
       shake: 0, comboT: 0, combo: 0,
       lastShot: 0, time: 0,
     };
