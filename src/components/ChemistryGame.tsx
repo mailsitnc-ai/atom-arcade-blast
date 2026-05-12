@@ -820,3 +820,124 @@ function spawnParticles(s: any, x: number, y: number, color: string, n: number) 
     s.particles.push({ x, y, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp, life: 20+Math.random()*15, color });
   }
 }
+
+function drawBoss(ctx: CanvasRenderingContext2D, b: Boss, level: typeof LEVELS[number]) {
+  const x = Math.round(b.x), y = Math.round(b.y);
+  const t = b.t;
+  const color = level.boss.color;
+  ctx.shadowBlur = 24; ctx.shadowColor = color;
+
+  if (level.id === 1) {
+    // Radioactive Slime — wobbling green blob with drips
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    for (let i = 0; i < 24; i++) {
+      const a = (i/24)*Math.PI*2;
+      const r = 44 + Math.sin(t*0.1 + i)*3;
+      const px = x + Math.cos(a)*r, py = y + Math.sin(a)*r*0.85;
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath(); ctx.fill();
+    ctx.shadowBlur = 0;
+    // drips
+    ctx.fillStyle = "#39ff14";
+    for (let i = 0; i < 4; i++) {
+      const dx = x - 30 + i*20, dy = y + 30 + Math.sin(t*0.1+i)*6;
+      ctx.fillRect(dx-2, dy, 4, 8);
+    }
+    // eyes
+    ctx.fillStyle = "#fff"; ctx.fillRect(x-18, y-8, 10, 10); ctx.fillRect(x+8, y-8, 10, 10);
+    ctx.fillStyle = "#000"; ctx.fillRect(x-14, y-4, 4, 4); ctx.fillRect(x+12, y-4, 4, 4);
+  } else if (level.id === 2) {
+    // Unstable Molecule Titan — 3 bonded atoms forming a triangle
+    const r = 42;
+    const positions = [0, (Math.PI*2)/3, (Math.PI*4)/3].map(a => ({ x: x + Math.cos(a + t*0.02)*22, y: y + Math.sin(a + t*0.02)*22 }));
+    ctx.strokeStyle = "#fff176"; ctx.lineWidth = 4;
+    ctx.beginPath();
+    for (let i = 0; i < 3; i++) {
+      const p1 = positions[i], p2 = positions[(i+1)%3];
+      ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
+    }
+    ctx.stroke();
+    for (let i = 0; i < 3; i++) {
+      ctx.fillStyle = i === 0 ? color : i === 1 ? "#7df9ff" : "#fff176";
+      ctx.beginPath(); ctx.arc(positions[i].x, positions[i].y, 22, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "#000"; ctx.fillRect(x-4, y-4, 8, 8);
+  } else if (level.id === 3) {
+    // Plasma Reactor Robot — square chassis with rotating laser arm
+    ctx.fillStyle = "#1a3a55";
+    ctx.fillRect(x-40, y-32, 80, 64);
+    ctx.fillStyle = color;
+    ctx.fillRect(x-36, y-28, 72, 14);   // visor
+    ctx.fillStyle = "#fff"; ctx.fillRect(x-26, y-24, 8, 6); ctx.fillRect(x+18, y-24, 8, 6);
+    // antenna
+    ctx.fillStyle = "#ff2e2e"; ctx.fillRect(x-2, y-44, 4, 12);
+    ctx.beginPath(); ctx.arc(x, y-46, 4, 0, Math.PI*2); ctx.fill();
+    // rotating arm
+    ctx.save(); ctx.translate(x, y+10); ctx.rotate(t*0.05);
+    ctx.fillStyle = "#7df9ff"; ctx.fillRect(0, -3, 50, 6);
+    ctx.restore();
+    // shoulders
+    ctx.fillStyle = "#a8121c"; ctx.fillRect(x-44, y-10, 6, 24); ctx.fillRect(x+38, y-10, 6, 24);
+    ctx.shadowBlur = 0;
+  } else if (level.id === 4) {
+    // Toxic Mutation Beast — spiked monster
+    ctx.fillStyle = color;
+    // spikes
+    for (let i = 0; i < 12; i++) {
+      const a = (i/12)*Math.PI*2 + t*0.02;
+      const r1 = 38, r2 = 56 + Math.sin(t*0.1 + i)*4;
+      ctx.beginPath();
+      ctx.moveTo(x + Math.cos(a-0.15)*r1, y + Math.sin(a-0.15)*r1);
+      ctx.lineTo(x + Math.cos(a)*r2,      y + Math.sin(a)*r2);
+      ctx.lineTo(x + Math.cos(a+0.15)*r1, y + Math.sin(a+0.15)*r1);
+      ctx.closePath(); ctx.fill();
+    }
+    // body
+    ctx.fillStyle = "#5a0a3a"; ctx.beginPath(); ctx.arc(x, y, 38, 0, Math.PI*2); ctx.fill();
+    ctx.shadowBlur = 0;
+    // glowing eyes
+    ctx.fillStyle = "#fff176"; ctx.fillRect(x-16, y-8, 8, 8); ctx.fillRect(x+8, y-8, 8, 8);
+    ctx.fillStyle = "#000"; ctx.fillRect(x-13, y-5, 3, 3); ctx.fillRect(x+11, y-5, 3, 3);
+    // fangs
+    ctx.fillStyle = "#fff"; ctx.fillRect(x-10, y+10, 4, 8); ctx.fillRect(x+6, y+10, 4, 8);
+  } else {
+    // Fusion-Core Final Boss — pulsing star with orbiting electrons
+    const pulse = 50 + Math.sin(t*0.12)*8;
+    // orbits
+    ctx.strokeStyle = "#fff176"; ctx.lineWidth = 2; ctx.shadowBlur = 10;
+    for (let k = 0; k < 3; k++) {
+      ctx.save(); ctx.translate(x, y); ctx.rotate(t*0.03 + k*1.04);
+      ctx.beginPath(); ctx.ellipse(0, 0, 70, 28, 0, 0, Math.PI*2); ctx.stroke();
+      ctx.restore();
+    }
+    // electrons
+    ctx.shadowBlur = 14; ctx.shadowColor = "#0ff";
+    for (let k = 0; k < 3; k++) {
+      const a = t*0.06 + k*(Math.PI*2/3);
+      ctx.fillStyle = "#0ff";
+      ctx.beginPath(); ctx.arc(x + Math.cos(a)*70, y + Math.sin(a)*28, 6, 0, Math.PI*2); ctx.fill();
+    }
+    // core
+    ctx.shadowBlur = 30; ctx.shadowColor = color;
+    const grad = ctx.createRadialGradient(x, y, 4, x, y, pulse);
+    grad.addColorStop(0, "#ffffff");
+    grad.addColorStop(0.4, color);
+    grad.addColorStop(1, "#ff6a00");
+    ctx.fillStyle = grad;
+    ctx.beginPath(); ctx.arc(x, y, pulse, 0, Math.PI*2); ctx.fill();
+    ctx.shadowBlur = 0;
+    // angry eyes
+    ctx.fillStyle = "#000"; ctx.fillRect(x-18, y-6, 10, 4); ctx.fillRect(x+8, y-6, 10, 4);
+  }
+
+  // crown indicator when enraged (under half hp)
+  if (b.hp < b.maxHp/2) {
+    ctx.fillStyle = "#ff2e2e"; ctx.font = "bold 10px monospace"; ctx.textAlign = "center";
+    ctx.shadowBlur = 8; ctx.shadowColor = "#ff2e2e";
+    ctx.fillText("⚠ ENRAGED ⚠", x, y - 70);
+    ctx.shadowBlur = 0;
+  }
+}
