@@ -252,11 +252,11 @@ function Leaderboard({ lb, onBack }: { lb: LBEntry[]; onBack: () => void }) {
 
 function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
   level: typeof LEVELS[number];
-  onComplete: () => void;
-  onDeath: () => void;
-  onScore: (n: number) => void;
-  onStat: (k: "enemies"|"atoms"|"combo"|"maxCombo", v?: number) => void;
-  onHud: (h: any) => void;
+  onComplete: React.RefObject<() => void>;
+  onDeath: React.RefObject<() => void>;
+  onScore: React.RefObject<(n: number) => void>;
+  onStat: React.RefObject<(k: "enemies"|"atoms"|"combo"|"maxCombo", v?: number) => void>;
+  onHud: React.RefObject<(h: any) => void>;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const stateRef = useRef<any>(null);
