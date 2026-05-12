@@ -500,10 +500,18 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
         }
       }
 
-      // Boss spawn after all enemies dead
-      if (s.enemies.length === 0 && !s.boss && !s.bossDefeated) {
-        s.boss = { x: W/2, y: 80, hp: level.boss.hp, maxHp: level.boss.hp, phase: 0, cd: 120, t: 0, introT: 120 };
-        sfx("boss");
+      // Portal appears after enemies cleared — player must enter it to start boss
+      if (s.enemies.length === 0 && !s.boss && !s.bossDefeated && !s.portal) {
+        s.portal = { x: W/2, y: H/2, t: 0 };
+      }
+      if (s.portal && !s.boss) {
+        s.portal.t++;
+        if (Math.hypot(s.portal.x - p.x, s.portal.y - p.y) < 32) {
+          s.boss = { x: W/2, y: 80, hp: level.boss.hp, maxHp: level.boss.hp, phase: 0, cd: 120, t: 0, introT: 120 };
+          s.portal = null;
+          spawnParticles(s, p.x, p.y, "#22e0d0", 30);
+          sfx("boss");
+        }
       }
 
       if (s.boss) {
@@ -549,6 +557,71 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
               bullets.push({ x:b.x, y:b.y, vx:Math.cos(a)*6, vy:Math.sin(a)*6, dmg:2, life:220 });
             }
             s.eBullets.push(...bullets);
+          }
+          // Per-boss UNIQUE abilities
+          const ex = s.bossExtra;
+          const pat = level.boss.pattern;
+          if (pat === "radial") {
+            // Radioactive Slime: leaves toxic puddles (slow eBullets) every ~2s
+            ex.minionCd--;
+            if (ex.minionCd <= 0) {
+              ex.minionCd = 90;
+              for (let i=0;i<4;i++) {
+                const a = Math.random()*Math.PI*2;
+                s.eBullets.push({ x:b.x+Math.cos(a)*30, y:b.y+Math.sin(a)*30, vx:Math.cos(a)*0.6, vy:Math.sin(a)*0.6, dmg:1, life:260 });
+              }
+            }
+          } else if (pat === "aimed") {
+            // Molecule Titan: dashes at the player
+            ex.dashCd--;
+            if (ex.dashCd <= 0) {
+              ex.dashCd = 180;
+              const a = Math.atan2(p.y-b.y, p.x-b.x);
+              b.x += Math.cos(a)*60; b.y += Math.sin(a)*60;
+              s.shake = 10;
+            }
+          } else if (pat === "spiral") {
+            // Plasma Robot: sweeping laser beam
+            ex.beamCd--;
+            if (ex.beamCd <= 0 && ex.beamT <= 0) { ex.beamCd = 220; ex.beamT = 80; }
+            if (ex.beamT > 0) {
+              ex.beamT--;
+              const a = Math.atan2(p.y-b.y, p.x-b.x);
+              // damage line
+              const dx = p.x - b.x, dy = p.y - b.y;
+              const projLen = dx*Math.cos(a) + dy*Math.sin(a);
+              const px2 = b.x + Math.cos(a)*projLen, py2 = b.y + Math.sin(a)*projLen;
+              if (projLen > 0 && Math.hypot(px2-p.x, py2-p.y) < 8 && p.iframes <= 0) {
+                p.hp--; p.iframes = 50; s.shake = 10; sfx("hit");
+                if (p.hp <= 0 && !dead) { dead = true; setTimeout(onDeath.current!, 200); }
+              }
+            }
+          } else if (pat === "burst") {
+            // Toxic Beast: spawns minion enemies
+            ex.minionCd--;
+            if (ex.minionCd <= 0 && s.enemies.length < 4) {
+              ex.minionCd = 200;
+              for (let i=0;i<2;i++) {
+                s.enemies.push({
+                  x: b.x + (Math.random()-0.5)*40, y: b.y + 40,
+                  hp: 1, cd: 60,
+                  vx: (Math.random()-0.5)*level.enemySpeed,
+                  vy: (Math.random()-0.5)*level.enemySpeed,
+                });
+              }
+            }
+          } else { // fusion
+            // Final Boss: orbital satellite shots
+            ex.minionCd--;
+            if (ex.minionCd <= 0) {
+              ex.minionCd = 60;
+              for (let i=0;i<2;i++) {
+                const a = b.t*0.08 + i*Math.PI;
+                const ox = b.x + Math.cos(a)*60, oy = b.y + Math.sin(a)*60;
+                const aim = Math.atan2(p.y-oy, p.x-ox);
+                s.eBullets.push({ x:ox, y:oy, vx:Math.cos(aim)*4.5, vy:Math.sin(aim)*4.5, dmg:1, life:200 });
+              }
+            }
           }
           // bullets hit boss
           for (const bl of s.bullets) {
