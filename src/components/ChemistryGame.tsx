@@ -704,13 +704,7 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
           ctx.fillText(`▶ ${level.boss.name.toUpperCase()} ◀`, W/2, H/2+18);
           ctx.shadowBlur = 0;
         } else {
-          ctx.shadowBlur = 30; ctx.shadowColor = level.boss.color;
-          ctx.fillStyle = level.boss.color;
-          ctx.beginPath(); ctx.arc(b.x, b.y, 45, 0, Math.PI*2); ctx.fill();
-          ctx.shadowBlur = 0;
-          ctx.fillStyle = "#000";
-          ctx.fillRect(b.x-20, b.y-10, 8,8); ctx.fillRect(b.x+12, b.y-10, 8,8);
-          ctx.fillRect(b.x-15, b.y+10, 30, 4);
+          drawBoss(ctx, b, level);
         }
       }
 
