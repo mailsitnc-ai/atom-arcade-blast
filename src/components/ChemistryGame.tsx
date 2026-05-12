@@ -367,7 +367,7 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
         b.x += b.vx; b.y += b.vy; b.life--;
         if (Math.hypot(b.x-p.x, b.y-p.y) < 14 && p.iframes <= 0) {
           p.hp--; p.iframes = 60; s.shake = 12; sfx("hit");
-          if (p.hp <= 0 && !dead) { dead = true; setTimeout(onDeath, 200); }
+          if (p.hp <= 0 && !dead) { dead = true; setTimeout(onDeath.current!, 200); }
           return false;
         }
         return b.life > 0 && b.x > 0 && b.x < W && b.y > 0 && b.y < H;
@@ -391,7 +391,7 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
         // collide w/ player
         if (Math.hypot(e.x-p.x, e.y-p.y) < 22 && p.iframes <= 0) {
           p.hp--; p.iframes = 60; s.shake = 8; sfx("hit");
-          if (p.hp <= 0 && !dead) { dead = true; setTimeout(onDeath, 200); }
+          if (p.hp <= 0 && !dead) { dead = true; setTimeout(onDeath.current!, 200); }
         }
         // bullets hit enemy
         for (const b of s.bullets) {
@@ -400,9 +400,9 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
             spawnParticles(s, e.x, e.y, level.enemyColor, 6);
             if (e.hp <= 0) {
               s.combo++; s.comboT = 90;
-              onStat("combo", 1);
+              onStat.current!("combo", 1);
               const bonus = 100 + s.combo*10;
-              onScore(bonus); onStat("enemies", 1);
+              onScore.current!(bonus); onStat.current!("enemies", 1);
               spawnParticles(s, e.x, e.y, "#fff176", 16);
               if (s.combo >= 3) sfx("combo");
               sfx("hit");
@@ -418,7 +418,7 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
         a.pulse += 0.1;
         if (Math.hypot(a.x-p.x, a.y-p.y) < 20) {
           a.taken = true; s.atomsCollected++;
-          s.ammo += 5; onScore(50); onStat("atoms", 1);
+          s.ammo += 5; onScore.current!(50); onStat.current!("atoms", 1);
           spawnParticles(s, a.x, a.y, "#0ff", 20);
           sfx("atom");
           if (s.atomsCollected >= 8 && !s.unlimited) {
@@ -482,11 +482,11 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
             if (Math.hypot(bl.x-b.x, bl.y-b.y) < 50) {
               b.hp -= bl.dmg; bl.life = 0;
               spawnParticles(s, bl.x, bl.y, level.boss.color, 4);
-              onScore(20);
+              onScore.current!(20);
               if (b.hp <= 0) {
                 spawnParticles(s, b.x, b.y, "#fff176", 60);
                 s.shake = 25; s.bossDefeated = true; s.boss = null;
-                setTimeout(onComplete, 800);
+                setTimeout(onComplete.current!, 800);
                 break;
               }
             }
@@ -494,7 +494,7 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
           // touch
           if (Math.hypot(b.x-p.x, b.y-p.y) < 55 && p.iframes<=0) {
             p.hp -= 2; p.iframes = 70; s.shake = 14; sfx("hit");
-            if (p.hp <= 0 && !dead) { dead = true; setTimeout(onDeath, 200); }
+            if (p.hp <= 0 && !dead) { dead = true; setTimeout(onDeath.current!, 200); }
           }
         }
       }
@@ -614,7 +614,7 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
 
       ctx.restore();
 
-      onHud({
+      onHud.current!({
         ammo: s.ammo,
         atomsCollected: s.atomsCollected,
         enemiesLeft: s.enemies.length,
