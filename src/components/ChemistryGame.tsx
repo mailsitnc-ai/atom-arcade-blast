@@ -512,37 +512,58 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
       const sk = s.shake|0;
       ctx.translate((Math.random()-0.5)*sk, (Math.random()-0.5)*sk);
 
-      // bg
-      const grad = ctx.createLinearGradient(0,0,0,H);
-      grad.addColorStop(0, level.bgA); grad.addColorStop(1, level.bgB);
-      ctx.fillStyle = grad; ctx.fillRect(0,0,W,H);
+      // bg — flat dark navy lab grid
+      ctx.fillStyle = "#06182a"; ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle = "rgba(64,224,208,0.22)"; ctx.lineWidth = 1;
+      for (let x=0;x<=W;x+=24) { ctx.beginPath(); ctx.moveTo(x+0.5,0); ctx.lineTo(x+0.5,H); ctx.stroke(); }
+      for (let y=0;y<=H;y+=24) { ctx.beginPath(); ctx.moveTo(0,y+0.5); ctx.lineTo(W,y+0.5); ctx.stroke(); }
+      // bright frame edges
+      ctx.strokeStyle = "#22e0d0"; ctx.lineWidth = 3;
+      ctx.strokeRect(1.5,1.5,W-3,H-3);
 
-      // grid
-      ctx.strokeStyle = "rgba(0,255,255,0.08)"; ctx.lineWidth = 1;
-      for (let x=0;x<W;x+=40) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
-      for (let y=0;y<H;y+=40) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
-
-      // atoms
+      // atoms — orbital rings around glowing nucleus
       for (const a of s.atoms) {
         if (a.taken) continue;
-        const r = 12 + Math.sin(a.pulse)*3;
-        ctx.shadowBlur = 20; ctx.shadowColor = "#0ff";
-        ctx.fillStyle = "#0ff"; ctx.beginPath(); ctx.arc(a.x, a.y, r, 0, Math.PI*2); ctx.fill();
+        ctx.save();
+        ctx.translate(a.x, a.y);
+        ctx.shadowBlur = 14; ctx.shadowColor = "#22e0d0";
+        ctx.strokeStyle = "#22e0d0"; ctx.lineWidth = 2;
+        // two crossed elliptical orbits
+        for (let k=0;k<2;k++) {
+          ctx.save();
+          ctx.rotate(a.pulse*0.6 + k*Math.PI/2);
+          ctx.beginPath(); ctx.ellipse(0,0,16,7,0,0,Math.PI*2); ctx.stroke();
+          ctx.restore();
+        }
+        // nucleus
         ctx.shadowBlur = 0;
-        ctx.fillStyle = "#000"; ctx.font = "bold 10px monospace"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        ctx.fillText(a.symbol, a.x, a.y);
+        ctx.fillStyle = "#eafffb"; ctx.fillRect(-4,-4,8,8);
+        ctx.fillStyle = "#22e0d0"; ctx.fillRect(-2,-2,4,4);
+        ctx.restore();
       }
 
-      // enemies
+      // enemies — red 8-bit pixel monsters
       for (const e of s.enemies) {
-        ctx.shadowBlur = 12; ctx.shadowColor = level.enemyColor;
-        ctx.fillStyle = level.enemyColor;
-        ctx.fillRect(e.x-12, e.y-12, 24, 24);
+        const ex = Math.round(e.x), ey = Math.round(e.y);
         ctx.shadowBlur = 0;
-        ctx.fillStyle = "#000"; ctx.fillRect(e.x-6, e.y-4, 3,3); ctx.fillRect(e.x+3, e.y-4, 3,3);
+        // body
+        ctx.fillStyle = "#ff2e3a";
+        ctx.fillRect(ex-10, ey-12, 20, 22);
+        // ear bumps
+        ctx.fillRect(ex-10, ey-14, 4, 2);
+        ctx.fillRect(ex+6, ey-14, 4, 2);
+        // dark shadow strip
+        ctx.fillStyle = "#a8121c";
+        ctx.fillRect(ex-10, ey+6, 20, 4);
+        // eyes
+        ctx.fillStyle = "#fff"; ctx.fillRect(ex-7, ey-6, 5, 5); ctx.fillRect(ex+2, ey-6, 5, 5);
+        ctx.fillStyle = "#000"; ctx.fillRect(ex-6, ey-5, 2, 2); ctx.fillRect(ex+3, ey-5, 2, 2);
+        // teeth
+        ctx.fillStyle = "#fff"; ctx.fillRect(ex-6, ey+1, 12, 4);
+        ctx.fillStyle = "#a8121c"; ctx.fillRect(ex-3, ey+1, 2, 4); ctx.fillRect(ex+1, ey+1, 2, 4);
         // hp bar
-        ctx.fillStyle = "#000"; ctx.fillRect(e.x-12, e.y-18, 24, 3);
-        ctx.fillStyle = "#39ff14"; ctx.fillRect(e.x-12, e.y-18, 24*(e.hp/level.enemyHp), 3);
+        ctx.fillStyle = "#000"; ctx.fillRect(ex-10, ey-18, 20, 3);
+        ctx.fillStyle = "#39ff14"; ctx.fillRect(ex-10, ey-18, 20*(e.hp/level.enemyHp), 3);
       }
 
       // boss
@@ -590,18 +611,30 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
       }
       ctx.globalAlpha = 1;
 
-      // player
+      // player — white pixel scientist with green visor + cyan sword
       const blink = p.iframes>0 && (p.iframes%6<3);
       if (!blink) {
-        ctx.shadowBlur = 16; ctx.shadowColor = "#0ff";
-        ctx.fillStyle = "#0ff";
-        ctx.fillRect(p.x-12, p.y-12, 24, 24);
-        ctx.fillStyle = "#fff176";
-        ctx.fillRect(p.x-4, p.y-4, 8, 8);
-        // hp
+        const px = Math.round(p.x), py = Math.round(p.y);
         ctx.shadowBlur = 0;
-        ctx.fillStyle = "#000"; ctx.fillRect(p.x-15, p.y-22, 30, 4);
-        ctx.fillStyle = "#ff2e2e"; ctx.fillRect(p.x-15, p.y-22, 30*(p.hp/3), 4);
+        // body
+        ctx.fillStyle = "#f5f7fb"; ctx.fillRect(px-10, py-10, 20, 20);
+        // shadow underside
+        ctx.fillStyle = "#b9c0cc"; ctx.fillRect(px-10, py+6, 20, 4);
+        // green visor eyes
+        ctx.fillStyle = "#39ff14"; ctx.fillRect(px-6, py-7, 4, 4); ctx.fillRect(px+2, py-7, 4, 4);
+        // antenna
+        ctx.fillStyle = "#39ff14"; ctx.fillRect(px-1, py-14, 2, 4);
+        // sword pointing toward mouse
+        const a = Math.atan2(s.mouse.y-py, s.mouse.x-px);
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.rotate(a);
+        ctx.fillStyle = "#22e0d0"; ctx.fillRect(8, -2, 18, 4);
+        ctx.fillStyle = "#eafffb"; ctx.fillRect(22, -1, 4, 2);
+        ctx.restore();
+        // hp
+        ctx.fillStyle = "#000"; ctx.fillRect(px-15, py-20, 30, 4);
+        ctx.fillStyle = "#ff2e2e"; ctx.fillRect(px-15, py-20, 30*(p.hp/3), 4);
       }
 
       // combo
