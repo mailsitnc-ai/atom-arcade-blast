@@ -23,6 +23,7 @@ export type LevelDef = {
     analogy: string;
     diagram: "atom" | "bond" | "ph" | "reaction" | "periodic";
   };
+  quiz: { q: string; choices: string[]; answer: number }[];
 };
 
 export const LEVELS: LevelDef[] = [
