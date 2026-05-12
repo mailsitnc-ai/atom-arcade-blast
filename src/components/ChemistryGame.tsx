@@ -69,7 +69,7 @@ export default function ChemistryGame() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-[#07020f] text-[#e6f7ff]">
       <header className="mb-3 text-center">
-        <h1 className="neon text-2xl md:text-4xl tracking-widest" style={{ color: "#0ff" }}>⚛ ATOM ARCADE ⚛</h1>
+        <h1 className="neon text-2xl md:text-4xl tracking-widest" style={{ color: "#0ff" }}>⚛ CHEM QUEST ⚛</h1>
         <p className="text-[10px] md:text-xs mt-1" style={{ color: "#fff176" }}>RETRO CHEMISTRY QUEST · 5 LEVELS · WASD TO MOVE · MOUSE/SPACE TO FIRE</p>
       </header>
 
