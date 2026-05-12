@@ -63,6 +63,17 @@ export default function ChemistryGame() {
     }
   };
 
+  // Refresh refs every render so PlayCanvas always calls the latest closures
+  onCompleteRef.current = onLevelComplete;
+  onDeathRef.current = onPlayerDied;
+  onScoreRef.current = (d: number) => setScore(s => s + d);
+  onStatRef.current = (k: any, v: number = 1) => setStats(s => {
+    const next = { ...s, [k]: (s as any)[k] + v };
+    if (k === "combo") next.maxCombo = Math.max(s.maxCombo, next.combo);
+    return next;
+  });
+  onHudRef.current = setHud;
+
   const submitScore = () => {
     const entry: LBEntry = {
       name: nameInput.toUpperCase().slice(0,8) || "???",
@@ -85,15 +96,11 @@ export default function ChemistryGame() {
           {phase === "play" && (
             <PlayCanvas
               level={LEVELS[levelIdx]}
-              onComplete={onLevelComplete}
-              onDeath={onPlayerDied}
-              onScore={(d) => setScore(s => s + d)}
-              onStat={(k, v=1) => setStats(s => {
-                const next = { ...s, [k]: (s as any)[k] + v };
-                if (k === "combo") next.maxCombo = Math.max(s.maxCombo, next.combo);
-                return next;
-              })}
-              onHud={setHud}
+              onComplete={onCompleteRef}
+              onDeath={onDeathRef}
+              onScore={onScoreRef}
+              onStat={onStatRef}
+              onHud={onHudRef}
             />
           )}
           {phase === "menu" && (
