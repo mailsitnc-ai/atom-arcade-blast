@@ -581,19 +581,26 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
               s.shake = 10;
             }
           } else if (pat === "spiral") {
-            // Plasma Robot: sweeping laser beam
+            // Plasma Robot: sweeping laser beam (telegraphed, then fires)
             ex.beamCd--;
-            if (ex.beamCd <= 0 && ex.beamT <= 0) { ex.beamCd = 220; ex.beamT = 80; }
+            if (ex.beamCd <= 0 && ex.beamT <= 0) {
+              ex.beamCd = 260;
+              ex.beamT = 110;             // total
+              ex.beamAngle = Math.atan2(p.y - b.y, p.x - b.x); // lock-in angle
+            }
             if (ex.beamT > 0) {
               ex.beamT--;
-              const a = Math.atan2(p.y-b.y, p.x-b.x);
-              // damage line
-              const dx = p.x - b.x, dy = p.y - b.y;
-              const projLen = dx*Math.cos(a) + dy*Math.sin(a);
-              const px2 = b.x + Math.cos(a)*projLen, py2 = b.y + Math.sin(a)*projLen;
-              if (projLen > 0 && Math.hypot(px2-p.x, py2-p.y) < 8 && p.iframes <= 0) {
-                p.hp--; p.iframes = 50; s.shake = 10; sfx("hit");
-                if (p.hp <= 0 && !dead) { dead = true; setTimeout(onDeath.current!, 200); }
+              // first 50f = warning telegraph (no damage), then 60f live beam
+              const live = ex.beamT < 60;
+              if (live) {
+                const a = ex.beamAngle ?? 0;
+                const dx = p.x - b.x, dy = p.y - b.y;
+                const projLen = dx*Math.cos(a) + dy*Math.sin(a);
+                const px2 = b.x + Math.cos(a)*projLen, py2 = b.y + Math.sin(a)*projLen;
+                if (projLen > 0 && Math.hypot(px2-p.x, py2-p.y) < 10 && p.iframes <= 0) {
+                  p.hp--; p.iframes = 60; s.shake = 10; sfx("hit");
+                  if (p.hp <= 0 && !dead) { dead = true; setTimeout(onDeath.current!, 200); }
+                }
               }
             }
           } else if (pat === "burst") {
@@ -637,9 +644,9 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
               }
             }
           }
-          // touch
-          if (Math.hypot(b.x-p.x, b.y-p.y) < 55 && p.iframes<=0) {
-            p.hp -= 2; p.iframes = 70; s.shake = 14; sfx("hit");
+          // touch (1 dmg, big iframe window so contact can't double-tap)
+          if (Math.hypot(b.x-p.x, b.y-p.y) < 50 && p.iframes<=0) {
+            p.hp -= 1; p.iframes = 90; s.shake = 14; sfx("hit");
             if (p.hp <= 0 && !dead) { dead = true; setTimeout(onDeath.current!, 200); }
           }
         }
