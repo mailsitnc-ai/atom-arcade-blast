@@ -876,7 +876,7 @@ function drawBoss(
   b: { x: number; y: number; t: number; hp: number; maxHp: number },
   pattern: "radial" | "aimed" | "spiral" | "burst" | "fusion",
   color: string,
-  ex: { beamT: number },
+  ex: { beamT: number; beamAngle?: number },
 ) {
   const x = Math.round(b.x), y = Math.round(b.y), t = b.t;
   ctx.save();
@@ -932,13 +932,20 @@ function drawBoss(
     ctx.fillRect(x-4,y-44,8,4);
     ctx.shadowBlur = 0;
     if (ex.beamT > 0) {
+      const live = ex.beamT < 60;
       ctx.save();
       ctx.translate(x,y);
-      ctx.rotate(Math.atan2(0,1) + Math.sin(t*0.1)*0.1);
-      ctx.fillStyle = "rgba(255,46,46,0.35)";
-      ctx.fillRect(0,-6, 600, 12);
-      ctx.fillStyle = "#ff2e2e";
-      ctx.fillRect(0,-2, 600, 4);
+      ctx.rotate(ex.beamAngle ?? 0);
+      if (!live) {
+        // warning telegraph — thin dashed orange line
+        ctx.fillStyle = "rgba(255,180,40,0.35)";
+        ctx.fillRect(0,-1.5, 700, 3);
+      } else {
+        ctx.fillStyle = "rgba(255,46,46,0.35)";
+        ctx.fillRect(0,-8, 700, 16);
+        ctx.fillStyle = "#ff2e2e";
+        ctx.fillRect(0,-3, 700, 6);
+      }
       ctx.restore();
     }
   } else if (pattern === "burst") {
