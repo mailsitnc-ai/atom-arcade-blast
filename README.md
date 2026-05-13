@@ -2,7 +2,7 @@
 
 A retro-style chemistry-themed arcade shooter game built with React, TanStack Start, and Canvas rendering.
 
-![Atom Arcade Blast Gameplay](assets/screenshots/gameplay.png)
+![Atom Arcade Blast Gameplay](assets/screenshots/Atom-Arcade%20-%20gameplay%20screenshot.png)
 
 <div align="center">
   <sub>Built with ❤️ by <a href="https://github.com/mailsitnc-ai">mailsitnc-ai</a></sub>
@@ -65,78 +65,7 @@ Throughout the game, players learn:
 - Periodic table organization
 - Real-world applications of elements
 
-### Game Screens
-
-### Game Screens
-
-<div align="center">
-  <table>
-    <tr>
-      <td align="center"><img src="assets/screenshots/main-menu.png" width="200" alt="Main Menu"><br><small>Main Menu</small></td>
-      <td align="center"><img src="assets/screenshots/learning-screen.png" width="200" alt="Learning Screen"><br><small>Learning Screen</small></td>
-      <td align="center"><img src="assets/screenshots/quiz-screen.png" width="200" alt="Quiz Screen"><br><small>Quiz Screen</small></td>
-    </tr>
-    <tr>
-      <td align="center"><img src="assets/screenshots/gameplay.png" width="200" alt="Gameplay"><br><small>Gameplay Screen</small></td>
-      <td align="center"><img src="assets/screenshots/boss-battle.png" width="200" alt="Boss Battle"><br><small>Boss Battle</small></td>
-      <td align="center"><img src="assets/screenshots/leaderboard.png" width="200" alt="Leaderboard"><br><small>Leaderboard</small></td>
-    </tr>
-  </table>
-</div>
-
-<details>
-  <summary><strong>🎮 Click to see gameplay demonstration</strong></div>
-  
-  ![Gameplay Demo](assets/screenshots/gameplay-demo.gif)
-  
-  *Watch the game in action - navigate through menus, learn chemistry concepts, and engage in retro-style arcade shooting!*
-</details>
-
-### Screen Descriptions
-
-| Screen | Purpose | Key Features |
-|--------|---------|--------------|
-| **Main Menu** | Starting point | New game, leaderboard, retro styling with pulsating atom logo |
-| **Learning Screen** | Educational content | Element facts, atomic structure visuals, chemistry concepts for each level |
-| **Quiz Screen** | Knowledge check | Multiple choice questions based on the learning material, instant feedback |
-| **Gameplay Screen** | Core action | Shoot enemies, collect atoms, dodge projectiles, weapon evolution system |
-| **Boss Battle** | Level climax | Unique boss patterns, special attacks, strategic weak points |
-| **Leaderboard** | Competition | Top 15 scores, filter by level, date, and score metrics |
-
-Atom Arcade Blast is an educational arcade game that combines chemistry learning with fast-paced shooting action. Players battle through 5 chemistry-themed levels, collecting atoms, evolving weapons, and defeating mutated bosses while learning about elements and chemical concepts.
-
-## Features
-
-<div align="center">
-  <img src="https://img.shields.io/badge/Feature-5%20Levels-brightgreen" alt="5 Levels">
-  <img src="https://img.shields.io/badge/Feature-Retro%20Style-blue" alt="Retro Style">
-  <img src="https://img.shields.io/badge/Feature-Educational-yellow" alt="Educational">
-  <img src="https://img.shields.io/badge/Feature-Weapon%20System-orange" alt="Weapon System">
-  <img src="https://img.shields.io/badge/Feature-Boss%20Battles-purple" alt="Boss Battles">
-  <img src="https://img.shields.io/badge/Feature-Leaderboard-red" alt="Leaderboard">
-</div>
-
-### 🎯 Key Features
-
-- **5 Challenging Levels**: Each level introduces new chemistry concepts and gameplay mechanics
-- **Retro Pixel Art Style**: Authentic 8-bit inspired visuals with CRT screen effects
-- **Chemistry Education**: Learn element symbols, atomic structure, and chemical properties through gameplay
-- **Progressive Weapon System**: Collect atoms to unlock and upgrade your weapon arsenal
-- **Boss Battles**: Five unique boss encounters with distinct attack patterns
-- **Leaderboard System**: Save and compete for high scores
-- **Responsive Design**: Playable on desktop and mobile devices
-- **Sound Effects**: Immersive retro audio feedback for actions and events
-
-### 🧪 Educational Value
-
-Throughout the game, players learn:
-- Element symbols and names
-- Basic atomic structure
-- Chemical properties of common elements
-- Periodic table organization
-- Real-world applications of elements
-
-## Gameplay
+## Game Screens
 
 ### Controls
 - **WASD / Arrow Keys**: Move your scientist character
