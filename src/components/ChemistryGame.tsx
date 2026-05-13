@@ -674,12 +674,11 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
       ctx.strokeStyle = "#22e0d0"; ctx.lineWidth = 3;
       ctx.strokeRect(1.5,1.5,W-3,H-3);
 
-      // atoms — orbital rings around glowing nucleus
+      // atoms — orbital rings around glowing nucleus (no shadow for perf)
       for (const a of s.atoms) {
         if (a.taken) continue;
         ctx.save();
         ctx.translate(a.x, a.y);
-        ctx.shadowBlur = 14; ctx.shadowColor = "#22e0d0";
         ctx.strokeStyle = "#22e0d0"; ctx.lineWidth = 2;
         // two crossed elliptical orbits
         for (let k=0;k<2;k++) {
@@ -689,7 +688,6 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
           ctx.restore();
         }
         // nucleus
-        ctx.shadowBlur = 0;
         ctx.fillStyle = "#eafffb"; ctx.fillRect(-4,-4,8,8);
         ctx.fillStyle = "#22e0d0"; ctx.fillRect(-2,-2,4,4);
         ctx.restore();
@@ -758,19 +756,15 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
         }
       }
 
-      // bullets player
+      // bullets player (shadow disabled for perf — using bright fill instead)
+      ctx.fillStyle = level.weapon.color;
       for (const b of s.bullets) {
-        ctx.shadowBlur = 14; ctx.shadowColor = level.weapon.color;
-        ctx.fillStyle = level.weapon.color;
         ctx.beginPath(); ctx.arc(b.x, b.y, level.weapon.size, 0, Math.PI*2); ctx.fill();
-        ctx.shadowBlur = 0;
       }
       // bullets enemy
+      ctx.fillStyle = "#ff2e2e";
       for (const b of s.eBullets) {
-        ctx.shadowBlur = 8; ctx.shadowColor = "#ff2e2e";
-        ctx.fillStyle = "#ff2e2e";
         ctx.beginPath(); ctx.arc(b.x, b.y, 5, 0, Math.PI*2); ctx.fill();
-        ctx.shadowBlur = 0;
       }
 
       // particles
