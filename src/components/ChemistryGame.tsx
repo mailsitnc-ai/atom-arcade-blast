@@ -302,7 +302,7 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
       boss: null as Boss | null,
       bossDefeated: false,
       portal: null as { x: number; y: number; t: number } | null,
-      bossExtra: { dashCd: 0, minionCd: 0, beamCd: 0, beamT: 0 },
+      bossExtra: { dashCd: 0, minionCd: 0, beamCd: 0, beamT: 0, beamAngle: 0 },
       shake: 0, comboT: 0, combo: 0,
       lastShot: 0, time: 0,
     };
@@ -581,19 +581,26 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
               s.shake = 10;
             }
           } else if (pat === "spiral") {
-            // Plasma Robot: sweeping laser beam
+            // Plasma Robot: sweeping laser beam (telegraphed, then fires)
             ex.beamCd--;
-            if (ex.beamCd <= 0 && ex.beamT <= 0) { ex.beamCd = 220; ex.beamT = 80; }
+            if (ex.beamCd <= 0 && ex.beamT <= 0) {
+              ex.beamCd = 260;
+              ex.beamT = 110;             // total
+              ex.beamAngle = Math.atan2(p.y - b.y, p.x - b.x); // lock-in angle
+            }
             if (ex.beamT > 0) {
               ex.beamT--;
-              const a = Math.atan2(p.y-b.y, p.x-b.x);
-              // damage line
-              const dx = p.x - b.x, dy = p.y - b.y;
-              const projLen = dx*Math.cos(a) + dy*Math.sin(a);
-              const px2 = b.x + Math.cos(a)*projLen, py2 = b.y + Math.sin(a)*projLen;
-              if (projLen > 0 && Math.hypot(px2-p.x, py2-p.y) < 8 && p.iframes <= 0) {
-                p.hp--; p.iframes = 50; s.shake = 10; sfx("hit");
-                if (p.hp <= 0 && !dead) { dead = true; setTimeout(onDeath.current!, 200); }
+              // first 50f = warning telegraph (no damage), then 60f live beam
+              const live = ex.beamT < 60;
+              if (live) {
+                const a = ex.beamAngle ?? 0;
+                const dx = p.x - b.x, dy = p.y - b.y;
+                const projLen = dx*Math.cos(a) + dy*Math.sin(a);
+                const px2 = b.x + Math.cos(a)*projLen, py2 = b.y + Math.sin(a)*projLen;
+                if (projLen > 0 && Math.hypot(px2-p.x, py2-p.y) < 10 && p.iframes <= 0) {
+                  p.hp--; p.iframes = 60; s.shake = 10; sfx("hit");
+                  if (p.hp <= 0 && !dead) { dead = true; setTimeout(onDeath.current!, 200); }
+                }
               }
             }
           } else if (pat === "burst") {
@@ -637,9 +644,9 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
               }
             }
           }
-          // touch
-          if (Math.hypot(b.x-p.x, b.y-p.y) < 55 && p.iframes<=0) {
-            p.hp -= 2; p.iframes = 70; s.shake = 14; sfx("hit");
+          // touch (1 dmg, big iframe window so contact can't double-tap)
+          if (Math.hypot(b.x-p.x, b.y-p.y) < 50 && p.iframes<=0) {
+            p.hp -= 1; p.iframes = 90; s.shake = 14; sfx("hit");
             if (p.hp <= 0 && !dead) { dead = true; setTimeout(onDeath.current!, 200); }
           }
         }
@@ -667,12 +674,11 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
       ctx.strokeStyle = "#22e0d0"; ctx.lineWidth = 3;
       ctx.strokeRect(1.5,1.5,W-3,H-3);
 
-      // atoms — orbital rings around glowing nucleus
+      // atoms — orbital rings around glowing nucleus (no shadow for perf)
       for (const a of s.atoms) {
         if (a.taken) continue;
         ctx.save();
         ctx.translate(a.x, a.y);
-        ctx.shadowBlur = 14; ctx.shadowColor = "#22e0d0";
         ctx.strokeStyle = "#22e0d0"; ctx.lineWidth = 2;
         // two crossed elliptical orbits
         for (let k=0;k<2;k++) {
@@ -682,7 +688,6 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
           ctx.restore();
         }
         // nucleus
-        ctx.shadowBlur = 0;
         ctx.fillStyle = "#eafffb"; ctx.fillRect(-4,-4,8,8);
         ctx.fillStyle = "#22e0d0"; ctx.fillRect(-2,-2,4,4);
         ctx.restore();
@@ -751,19 +756,15 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
         }
       }
 
-      // bullets player
+      // bullets player (shadow disabled for perf — using bright fill instead)
+      ctx.fillStyle = level.weapon.color;
       for (const b of s.bullets) {
-        ctx.shadowBlur = 14; ctx.shadowColor = level.weapon.color;
-        ctx.fillStyle = level.weapon.color;
         ctx.beginPath(); ctx.arc(b.x, b.y, level.weapon.size, 0, Math.PI*2); ctx.fill();
-        ctx.shadowBlur = 0;
       }
       // bullets enemy
+      ctx.fillStyle = "#ff2e2e";
       for (const b of s.eBullets) {
-        ctx.shadowBlur = 8; ctx.shadowColor = "#ff2e2e";
-        ctx.fillStyle = "#ff2e2e";
         ctx.beginPath(); ctx.arc(b.x, b.y, 5, 0, Math.PI*2); ctx.fill();
-        ctx.shadowBlur = 0;
       }
 
       // particles
@@ -869,7 +870,7 @@ function drawBoss(
   b: { x: number; y: number; t: number; hp: number; maxHp: number },
   pattern: "radial" | "aimed" | "spiral" | "burst" | "fusion",
   color: string,
-  ex: { beamT: number },
+  ex: { beamT: number; beamAngle?: number },
 ) {
   const x = Math.round(b.x), y = Math.round(b.y), t = b.t;
   ctx.save();
@@ -925,13 +926,20 @@ function drawBoss(
     ctx.fillRect(x-4,y-44,8,4);
     ctx.shadowBlur = 0;
     if (ex.beamT > 0) {
+      const live = ex.beamT < 60;
       ctx.save();
       ctx.translate(x,y);
-      ctx.rotate(Math.atan2(0,1) + Math.sin(t*0.1)*0.1);
-      ctx.fillStyle = "rgba(255,46,46,0.35)";
-      ctx.fillRect(0,-6, 600, 12);
-      ctx.fillStyle = "#ff2e2e";
-      ctx.fillRect(0,-2, 600, 4);
+      ctx.rotate(ex.beamAngle ?? 0);
+      if (!live) {
+        // warning telegraph — thin dashed orange line
+        ctx.fillStyle = "rgba(255,180,40,0.35)";
+        ctx.fillRect(0,-1.5, 700, 3);
+      } else {
+        ctx.fillStyle = "rgba(255,46,46,0.35)";
+        ctx.fillRect(0,-8, 700, 16);
+        ctx.fillStyle = "#ff2e2e";
+        ctx.fillRect(0,-3, 700, 6);
+      }
       ctx.restore();
     }
   } else if (pattern === "burst") {
