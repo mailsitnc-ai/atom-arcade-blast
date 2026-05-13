@@ -76,10 +76,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "description", content: "A retro 8-bit arcade chemistry adventure across 5 explosive levels." },
       { name: "author", content: "Chem Quest" },
       { property: "og:title", content: "CHEM QUEST — Retro Chemistry Adventure" },
-      { property: "og:description", content: "Pixel-art chemistry arcade with bosses, atoms & element fusion." },
+      { property: "og:description", content: "A retro 8-bit arcade chemistry adventure across 5 explosive levels." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "CHEM QUEST — Retro Chemistry Adventure" },
+      { name: "twitter:description", content: "A retro 8-bit arcade chemistry adventure across 5 explosive levels." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/e6aacc7f-6e88-4a3a-852a-7e618b9ef54f/id-preview-9da0305f--0335fc81-435b-4cc9-aef5-1af8ca9298e3.lovable.app-1778608596503.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/e6aacc7f-6e88-4a3a-852a-7e618b9ef54f/id-preview-9da0305f--0335fc81-435b-4cc9-aef5-1af8ca9298e3.lovable.app-1778608596503.png" },
     ],
     links: [
       {
