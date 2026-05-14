@@ -5,14 +5,18 @@ import QuizScreen from "./game/QuizScreen";
 import { sfx } from "./game/sound";
 import { loadLB, saveLB, type LBEntry } from "./game/leaderboard";
 
-type Phase = "menu" | "learn-intro" | "quiz" | "play" | "learn-recap" | "gameover" | "leaderboard" | "victory";
+type Phase = "menu" | "learn-intro" | "quiz" | "play" | "learn-recap" | "gameover" | "leaderboard" | "victory" | "practice-select" | "practice-play";
 type V = { x: number; y: number };
 type Bullet = V & { vx: number; vy: number; dmg: number; life: number };
-type PBullet = Bullet & { seek?: boolean; split?: number; trail?: string };
+type PBullet = Bullet & { seek?: boolean; split?: number; trail?: string; puddle?: boolean; chain?: boolean; vortex?: boolean };
 type Enemy = V & { hp: number; cd: number; vx: number; vy: number };
 type Atom = V & { taken: boolean; symbol: string; pulse: number };
 type Particle = V & { vx: number; vy: number; life: number; color: string };
 type Boss = { x: number; y: number; hp: number; maxHp: number; phase: number; cd: number; t: number; introT: number };
+type Puddle = { x: number; y: number; r: number; life: number; dmgCd: number; dmg: number };
+type ChainFx = { points: V[]; life: number };
+type PowerupKind = "heal" | "rapid" | "shield" | "double" | "ammo";
+type Powerup = { x: number; y: number; kind: PowerupKind; t: number };
 
 const W = 800, H = 500;
 const SYMBOLS = ["H", "He", "Li", "C", "N", "O", "Na", "Fe"];
@@ -26,6 +30,7 @@ export default function ChemistryGame() {
   const [lb, setLb] = useState<LBEntry[]>([]);
   const [nameInput, setNameInput] = useState("AAA");
   const [hud, setHud] = useState({ ammo: 10, atomsCollected: 0, enemiesLeft: 8, unlimited: false, bossHp: 0, bossMax: 0, bossActive: false, weapon: "" });
+  const [practiceLevel, setPracticeLevel] = useState(0);
 
   // Stable callback refs so PlayCanvas effect doesn't re-init every frame
   const onCompleteRef = useRef<() => void>(() => {});
@@ -45,6 +50,7 @@ export default function ChemistryGame() {
   const onLevelComplete = () => {
     sfx("win");
     setStats(s => ({ ...s, bosses: s.bosses + 1 }));
+    if (phase === "practice-play") { setPhase("menu"); return; }
     if (levelIdx >= LEVELS.length - 1) {
       setPhase("victory");
     } else {
@@ -54,6 +60,7 @@ export default function ChemistryGame() {
 
   const onPlayerDied = () => {
     sfx("die");
+    if (phase === "practice-play") { setPhase("menu"); return; }
     const newLives = lives - 1;
     setLives(newLives);
     setStats(s => ({ ...s, combo: 0 }));
