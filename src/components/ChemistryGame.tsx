@@ -668,11 +668,13 @@ function PlayCanvas({ level, practice, onComplete, onDeath, onScore, onStat, onH
       for (const pu of s.powerups) pu.t++;
       s.powerups = s.powerups.filter((pu: Powerup) => {
         if (Math.hypot(pu.x-p.x, pu.y-p.y) < 20) {
-          if (pu.kind === "heal") p.hp = Math.min(3, p.hp + 1);
-          else if (pu.kind === "rapid") s.buffs.rapid = 480;
-          else if (pu.kind === "shield") { s.buffs.shield = 360; p.iframes = 360; }
-          else if (pu.kind === "double") s.buffs.double = 480;
-          else if (pu.kind === "ammo") s.ammo += 25;
+          let msg = "";
+          if (pu.kind === "heal") { p.hp = Math.min(3, p.hp + 1); msg = "HEAL +1 HP"; }
+          else if (pu.kind === "rapid") { s.buffs.rapid = 480; msg = "RAPID FIRE — 8s (cooldown halved)"; }
+          else if (pu.kind === "shield") { s.buffs.shield = 360; p.iframes = 360; msg = "SHIELD — 6s invincibility"; }
+          else if (pu.kind === "double") { s.buffs.double = 480; msg = "DOUBLE DAMAGE — 8s"; }
+          else if (pu.kind === "ammo") { s.ammo += 25; msg = "AMMO +25"; }
+          s.toast = { text: msg, color: powerupColor(pu.kind), life: 120 };
           spawnParticles(s, pu.x, pu.y, powerupColor(pu.kind), 22);
           onScore.current!(40);
           sfx("atom");
@@ -1049,6 +1051,25 @@ function PlayCanvas({ level, practice, onComplete, onDeath, onScore, onStat, onH
         ctx.shadowBlur = 0;
       }
 
+      // Powerup pickup toast — top-center banner
+      if (s.toast && s.toast.life > 0) {
+        s.toast.life--;
+        const t = s.toast;
+        const alpha = Math.min(1, t.life / 30);
+        ctx.globalAlpha = alpha;
+        ctx.font = "bold 14px monospace"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        const w = ctx.measureText(t.text).width + 28;
+        ctx.fillStyle = "rgba(0,0,0,0.85)";
+        ctx.fillRect(W/2 - w/2, 14, w, 26);
+        ctx.strokeStyle = t.color; ctx.lineWidth = 2;
+        ctx.strokeRect(W/2 - w/2, 14, w, 26);
+        ctx.fillStyle = t.color;
+        ctx.shadowBlur = 10; ctx.shadowColor = t.color;
+        ctx.fillText(t.text, W/2, 27);
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+      }
+
       ctx.restore();
 
       // Throttle HUD updates to ~10fps to prevent React re-render lag
@@ -1132,6 +1153,17 @@ function drawPowerup(ctx: CanvasRenderingContext2D, pu: Powerup) {
            : pu.kind === "double" ? "x2"
            : "A";
   ctx.fillText(ch, x, y + 1);
+  // label under the icon so the player knows what it is
+  const label = pu.kind === "heal" ? "HEAL"
+              : pu.kind === "rapid" ? "RAPID"
+              : pu.kind === "shield" ? "SHIELD"
+              : pu.kind === "double" ? "2X DMG"
+              : "AMMO";
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = "#000"; ctx.fillRect(x-26, y+14, 52, 11);
+  ctx.fillStyle = col;
+  ctx.font = "bold 9px monospace"; ctx.textBaseline = "middle";
+  ctx.fillText(label, x, y + 19);
   ctx.restore();
 }
 
