@@ -316,8 +316,9 @@ function Leaderboard({ lb, onBack }: { lb: LBEntry[]; onBack: () => void }) {
 
 // ============== GAME PLAY CANVAS ==============
 
-function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
+function PlayCanvas({ level, practice, onComplete, onDeath, onScore, onStat, onHud }: {
   level: typeof LEVELS[number];
+  practice?: boolean;
   onComplete: React.RefObject<() => void>;
   onDeath: React.RefObject<() => void>;
   onScore: React.RefObject<(n: number) => void>;
@@ -330,7 +331,7 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
   // Reset on level change (or remount due to phase)
   useEffect(() => {
     const enemies: Enemy[] = [];
-    for (let i = 0; i < 8; i++) {
+    if (!practice) for (let i = 0; i < 8; i++) {
       enemies.push({
         x: 80 + Math.random()*(W-160),
         y: 60 + Math.random()*(H-120),
@@ -340,7 +341,7 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
       });
     }
     const atoms: Atom[] = [];
-    for (let i = 0; i < 8; i++) {
+    if (!practice) for (let i = 0; i < 8; i++) {
       atoms.push({
         x: 60 + Math.random()*(W-120),
         y: 60 + Math.random()*(H-120),
@@ -353,31 +354,43 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
       eBullets: [] as Bullet[],
       enemies, atoms,
       particles: [] as Particle[],
-      ammo: 10, unlimited: false, atomsCollected: 0,
+      puddles: [] as Puddle[],
+      chains: [] as ChainFx[],
+      powerups: [] as Powerup[],
+      buffs: { rapid: 0, double: 0, shield: 0 },
+      powerupCd: 360,
+      powerupsSpawned: 0,
+      ammo: practice ? 999 : 10,
+      unlimited: !!practice,
+      atomsCollected: 0,
       keys: {} as Record<string, boolean>,
       mouse: { x: W/2, y: 0, down: false },
-      boss: null as Boss | null,
+      boss: practice ? { x: W/2, y: 80, hp: level.boss.hp, maxHp: level.boss.hp, phase: 0, cd: 120, t: 0, introT: 120 } as Boss : null,
       bossDefeated: false,
       portal: null as { x: number; y: number; t: number } | null,
       bossExtra: { dashCd: 0, minionCd: 0, beamCd: 0, beamT: 0, beamAngle: 0 },
       shake: 0, comboT: 0, combo: 0,
       lastShot: 0, time: 0,
+      practice: !!practice,
     };
-  }, [level.id]);
+  }, [level.id, practice]);
 
   const fire = useCallback(() => {
     const s = stateRef.current; if (!s) return;
-    const cooldown = level.id === 2 ? 260 : level.id === 3 ? 180 : level.id === 5 ? 200 : 140;
+    let cooldown = level.id === 2 ? 260 : level.id === 3 ? 220 : level.id === 4 ? 200 : level.id === 5 ? 280 : 140;
+    if (s.buffs.rapid > 0) cooldown *= 0.5;
     if (s.lastShot && performance.now() - s.lastShot < cooldown) return;
-    if (!s.unlimited && s.ammo <= 0) return;
+    const cost = level.weapon.ammoCost;
+    if (!s.unlimited && s.ammo < cost) return;
     s.lastShot = performance.now();
-    if (!s.unlimited) s.ammo--;
+    if (!s.unlimited) s.ammo -= cost;
     const px = s.player.x, py = s.player.y;
     const dx = s.mouse.x - px, dy = s.mouse.y - py;
     const d = Math.hypot(dx,dy) || 1;
     const aim = Math.atan2(dy, dx);
     const sp = level.weapon.speed;
-    const dmg = level.weapon.damage + Math.floor(s.atomsCollected/3);
+    let dmg = level.weapon.damage + Math.floor(s.atomsCollected/3);
+    if (s.buffs.double > 0) dmg *= 2;
     const mk = (vx: number, vy: number, extra: Partial<PBullet> = {}): PBullet => ({
       x: px, y: py, vx, vy, dmg, life: 90, ...extra,
     });
@@ -393,26 +406,19 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
         }
         break;
       }
-      case 3: { // spray: 5-bullet cone toward mouse
-        for (let i = -2; i <= 2; i++) {
-          const a = aim + i * 0.18;
-          s.bullets.push(mk(Math.cos(a)*sp, Math.sin(a)*sp, { life: 80 }));
-        }
-        break;
-      }
-      case 4: { // homing chain: 3 seeking bullets
+      case 3: { // corrosive puddles — slow lobs that splat into damaging acid pools
         for (let i = -1; i <= 1; i++) {
-          const a = aim + i * 0.35;
-          s.bullets.push(mk(Math.cos(a)*sp*0.8, Math.sin(a)*sp*0.8, { seek: true, life: 110 }));
+          const a = aim + i * 0.22;
+          s.bullets.push(mk(Math.cos(a)*sp, Math.sin(a)*sp, { life: 35, puddle: true }));
         }
         break;
       }
-      case 5: { // fusion orb: heavy splitting projectile + 2 orbiters
-        s.bullets.push(mk(Math.cos(aim)*sp, Math.sin(aim)*sp, { split: 2, life: 90 }));
-        for (let i = 0; i < 2; i++) {
-          const a = aim + (i ? Math.PI/2 : -Math.PI/2);
-          s.bullets.push(mk(Math.cos(a)*sp*0.6, Math.sin(a)*sp*0.6, { life: 50 }));
-        }
+      case 4: { // chain lightning — single fast bolt that arcs to nearby enemies on hit
+        s.bullets.push(mk(Math.cos(aim)*sp, Math.sin(aim)*sp, { chain: true, life: 60 }));
+        break;
+      }
+      case 5: { // singularity vortex — slow heavy orb that pulls enemies in, then implodes
+        s.bullets.push(mk(Math.cos(aim)*sp, Math.sin(aim)*sp, { vortex: true, life: 120 }));
         break;
       }
     }
