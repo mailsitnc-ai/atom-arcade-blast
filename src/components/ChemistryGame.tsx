@@ -1051,6 +1051,25 @@ function PlayCanvas({ level, practice, onComplete, onDeath, onScore, onStat, onH
         ctx.shadowBlur = 0;
       }
 
+      // Powerup pickup toast — top-center banner
+      if (s.toast && s.toast.life > 0) {
+        s.toast.life--;
+        const t = s.toast;
+        const alpha = Math.min(1, t.life / 30);
+        ctx.globalAlpha = alpha;
+        ctx.font = "bold 14px monospace"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        const w = ctx.measureText(t.text).width + 28;
+        ctx.fillStyle = "rgba(0,0,0,0.85)";
+        ctx.fillRect(W/2 - w/2, 14, w, 26);
+        ctx.strokeStyle = t.color; ctx.lineWidth = 2;
+        ctx.strokeRect(W/2 - w/2, 14, w, 26);
+        ctx.fillStyle = t.color;
+        ctx.shadowBlur = 10; ctx.shadowColor = t.color;
+        ctx.fillText(t.text, W/2, 27);
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+      }
+
       ctx.restore();
 
       // Throttle HUD updates to ~10fps to prevent React re-render lag
