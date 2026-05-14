@@ -1134,6 +1134,17 @@ function drawPowerup(ctx: CanvasRenderingContext2D, pu: Powerup) {
            : pu.kind === "double" ? "x2"
            : "A";
   ctx.fillText(ch, x, y + 1);
+  // label under the icon so the player knows what it is
+  const label = pu.kind === "heal" ? "HEAL"
+              : pu.kind === "rapid" ? "RAPID"
+              : pu.kind === "shield" ? "SHIELD"
+              : pu.kind === "double" ? "2X DMG"
+              : "AMMO";
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = "#000"; ctx.fillRect(x-26, y+14, 52, 11);
+  ctx.fillStyle = col;
+  ctx.font = "bold 9px monospace"; ctx.textBaseline = "middle";
+  ctx.fillText(label, x, y + 19);
   ctx.restore();
 }
 
