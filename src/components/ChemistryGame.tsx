@@ -468,6 +468,10 @@ function PlayCanvas({ level, practice, onComplete, onDeath, onScore, onStat, onH
       p.y = Math.max(15, Math.min(H-15, p.y));
       if (p.iframes > 0) p.iframes--;
       if (s.comboT > 0) s.comboT--; else if (s.combo > 0) s.combo = 0;
+      // Buff timers
+      if (s.buffs.rapid > 0) s.buffs.rapid--;
+      if (s.buffs.double > 0) s.buffs.double--;
+      if (s.buffs.shield > 0) { s.buffs.shield--; if (p.iframes < 2) p.iframes = 2; }
 
       // Bullets
       const newBullets: PBullet[] = [];
@@ -487,6 +491,20 @@ function PlayCanvas({ level, practice, onComplete, onDeath, onScore, onStat, onH
             if (sp2 > max) { b.vx = b.vx/sp2*max; b.vy = b.vy/sp2*max; }
           }
         }
+        // Vortex: pull enemies in toward the orb each frame
+        if (b.vortex) {
+          for (const en of s.enemies) {
+            if (en.hp <= 0) continue;
+            const ax = b.x - en.x, ay = b.y - en.y, ad = Math.hypot(ax,ay) || 1;
+            if (ad < 200) { en.x += (ax/ad) * 1.6; en.y += (ay/ad) * 1.6; }
+          }
+          if (s.boss && !s.boss.introT) {
+            const ax = b.x - s.boss.x, ay = b.y - s.boss.y, ad = Math.hypot(ax,ay) || 1;
+            if (ad < 220) { s.boss.x += (ax/ad) * 0.4; s.boss.y += (ay/ad) * 0.2; }
+          }
+          // shrink/spin visually
+          b.vx *= 0.97; b.vy *= 0.97;
+        }
         b.x += b.vx; b.y += b.vy; b.life--;
         if (b.split && b.life === 40) {
           // split into 3 mini-bullets
@@ -496,9 +514,66 @@ function PlayCanvas({ level, practice, onComplete, onDeath, onScore, onStat, onH
           }
           b.split = 0;
         }
+        // Puddle bullet expired or off-screen → spawn corrosive puddle
+        if (b.puddle && (b.life <= 0 || b.x < 8 || b.x > W-8 || b.y < 8 || b.y > H-8)) {
+          s.puddles.push({ x: b.x, y: b.y, r: 38, life: 200, dmgCd: 0, dmg: b.dmg });
+          spawnParticles(s, b.x, b.y, "#39ff14", 10);
+        }
+        // Vortex implodes → AoE blast
+        if (b.vortex && b.life <= 0) {
+          spawnParticles(s, b.x, b.y, "#fff176", 36);
+          for (const en of s.enemies) {
+            if (en.hp <= 0) continue;
+            if (Math.hypot(en.x-b.x, en.y-b.y) < 110) {
+              en.hp -= b.dmg * 2;
+              spawnParticles(s, en.x, en.y, "#fff176", 6);
+            }
+          }
+          if (s.boss && !s.boss.introT && Math.hypot(s.boss.x-b.x, s.boss.y-b.y) < 130) {
+            s.boss.hp -= b.dmg * 2;
+            s.shake = 14;
+            if (s.boss.hp <= 0) {
+              spawnParticles(s, s.boss.x, s.boss.y, "#fff176", 60);
+              s.shake = 25; s.bossDefeated = true; s.boss = null;
+              setTimeout(onComplete.current!, 800);
+            }
+          }
+        }
         return b.life > 0 && b.x > -10 && b.x < W+10 && b.y > -10 && b.y < H+10;
       });
       if (newBullets.length) s.bullets.push(...newBullets);
+
+      // Puddles — damage enemies inside, fade out
+      s.puddles = s.puddles.filter((pu: Puddle) => {
+        pu.life--; pu.dmgCd--;
+        if (pu.dmgCd <= 0) {
+          pu.dmgCd = 18;
+          for (const en of s.enemies) {
+            if (en.hp <= 0) continue;
+            if (Math.hypot(en.x-pu.x, en.y-pu.y) < pu.r) {
+              en.hp -= pu.dmg;
+              spawnParticles(s, en.x, en.y, "#39ff14", 3);
+              if (en.hp <= 0) {
+                s.combo++; s.comboT = 90;
+                onStat.current!("combo", 1);
+                onScore.current!(100 + s.combo*10); onStat.current!("enemies", 1);
+              }
+            }
+          }
+          if (s.boss && !s.boss.introT && Math.hypot(s.boss.x-pu.x, s.boss.y-pu.y) < pu.r + 10) {
+            s.boss.hp -= pu.dmg;
+            if (s.boss.hp <= 0) {
+              spawnParticles(s, s.boss.x, s.boss.y, "#fff176", 60);
+              s.shake = 25; s.bossDefeated = true; s.boss = null;
+              setTimeout(onComplete.current!, 800);
+            }
+          }
+        }
+        return pu.life > 0;
+      });
+      // Chain lightning visual decay
+      s.chains = s.chains.filter((c: ChainFx) => { c.life--; return c.life > 0; });
+
       s.eBullets = s.eBullets.filter((b: Bullet) => {
         b.x += b.vx; b.y += b.vy; b.life--;
         if (Math.hypot(b.x-p.x, b.y-p.y) < 14 && p.iframes <= 0) {
@@ -532,7 +607,34 @@ function PlayCanvas({ level, practice, onComplete, onDeath, onScore, onStat, onH
         // bullets hit enemy
         for (const b of s.bullets) {
           if (Math.hypot(b.x-e.x, b.y-e.y) < 18) {
-            e.hp -= b.dmg; b.life = 0;
+            e.hp -= b.dmg;
+            // Chain lightning: arc to up to 3 nearby enemies
+            if (b.chain) {
+              const hitSet = new Set<Enemy>([e]);
+              const points: V[] = [{ x: b.x, y: b.y }, { x: e.x, y: e.y }];
+              let from: Enemy = e;
+              for (let k = 0; k < 3; k++) {
+                let next: Enemy | null = null, nd = 160*160;
+                for (const en2 of s.enemies) {
+                  if (en2.hp <= 0 || hitSet.has(en2)) continue;
+                  const dd = (en2.x-from.x)*(en2.x-from.x) + (en2.y-from.y)*(en2.y-from.y);
+                  if (dd < nd) { nd = dd; next = en2; }
+                }
+                if (!next) break;
+                hitSet.add(next);
+                points.push({ x: next.x, y: next.y });
+                next.hp -= Math.max(1, b.dmg - 1);
+                spawnParticles(s, next.x, next.y, "#ff3df0", 5);
+                if (next.hp <= 0) {
+                  s.combo++; s.comboT = 90;
+                  onStat.current!("combo", 1);
+                  onScore.current!(100 + s.combo*10); onStat.current!("enemies", 1);
+                }
+                from = next;
+              }
+              s.chains.push({ points, life: 12 });
+            }
+            b.life = 0;
             spawnParticles(s, e.x, e.y, level.enemyColor, 6);
             if (e.hp <= 0) {
               s.combo++; s.comboT = 90;
@@ -547,6 +649,37 @@ function PlayCanvas({ level, practice, onComplete, onDeath, onScore, onStat, onH
         }
       }
       s.enemies = s.enemies.filter((e: Enemy) => e.hp > 0);
+
+      // Powerups — spawn up to 3 per level, randomly over time
+      if (!s.bossDefeated) {
+        s.powerupCd--;
+        if (s.powerupCd <= 0 && s.powerupsSpawned < 3 && s.powerups.length < 2) {
+          s.powerupCd = 480 + Math.floor(Math.random()*240);
+          s.powerupsSpawned++;
+          const kinds: PowerupKind[] = ["heal","rapid","shield","double","ammo"];
+          const kind = kinds[Math.floor(Math.random()*kinds.length)];
+          s.powerups.push({
+            x: 60 + Math.random()*(W-120),
+            y: 60 + Math.random()*(H-120),
+            kind, t: 0,
+          });
+        }
+      }
+      for (const pu of s.powerups) pu.t++;
+      s.powerups = s.powerups.filter((pu: Powerup) => {
+        if (Math.hypot(pu.x-p.x, pu.y-p.y) < 20) {
+          if (pu.kind === "heal") p.hp = Math.min(3, p.hp + 1);
+          else if (pu.kind === "rapid") s.buffs.rapid = 480;
+          else if (pu.kind === "shield") { s.buffs.shield = 360; p.iframes = 360; }
+          else if (pu.kind === "double") s.buffs.double = 480;
+          else if (pu.kind === "ammo") s.ammo += 25;
+          spawnParticles(s, pu.x, pu.y, powerupColor(pu.kind), 22);
+          onScore.current!(40);
+          sfx("atom");
+          return false;
+        }
+        return pu.t < 1200; // despawn after 20s
+      });
 
       // Atoms
       for (const a of s.atoms) {
@@ -564,7 +697,7 @@ function PlayCanvas({ level, practice, onComplete, onDeath, onScore, onStat, onH
       }
 
       // Portal appears after enemies cleared — player must enter it to start boss
-      if (s.enemies.length === 0 && !s.boss && !s.bossDefeated && !s.portal) {
+      if (!s.practice && s.enemies.length === 0 && !s.boss && !s.bossDefeated && !s.portal) {
         s.portal = { x: W/2, y: H/2, t: 0 };
       }
       if (s.portal && !s.boss) {
