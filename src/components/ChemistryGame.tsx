@@ -244,7 +244,7 @@ function Overlay({ title, color, children }: any) {
   );
 }
 
-function Menu({ onStart, onLB, lb }: { onStart: () => void; onLB: () => void; lb: LBEntry[] }) {
+function Menu({ onStart, onLB, onPractice, lb }: { onStart: () => void; onLB: () => void; onPractice: () => void; lb: LBEntry[] }) {
   return (
     <div className="absolute inset-0 z-20 flex flex-col items-center justify-center crt p-6"
       style={{ background: "radial-gradient(circle at 50% 30%, #2a0a55, #07020f 70%)" }}>
@@ -253,13 +253,40 @@ function Menu({ onStart, onLB, lb }: { onStart: () => void; onLB: () => void; lb
       <p className="text-[10px] md:text-xs mb-6 max-w-md text-center opacity-80">
         Battle through 5 chemistry-themed levels. Collect atoms, evolve weapons, defeat mutated bosses.
       </p>
-      <div className="flex gap-3 mb-6">
+      <div className="flex flex-wrap gap-3 mb-6 justify-center">
         <NeonBtn color="#39ff14" onClick={onStart}>▶ NEW GAME</NeonBtn>
+        <NeonBtn color="#ff6ec7" onClick={onPractice}>⚔ BOSS PRACTICE</NeonBtn>
         <NeonBtn color="#0ff" onClick={onLB}>★ LEADERBOARD</NeonBtn>
       </div>
       <div className="text-[10px] opacity-70 text-center">
         Top Score: <span style={{color:"#fff176"}}>{lb[0]?.score ?? 0}</span> by {lb[0]?.name ?? "—"}
       </div>
+    </div>
+  );
+}
+
+function PracticeSelect({ onPick, onBack }: { onPick: (i: number) => void; onBack: () => void }) {
+  return (
+    <div className="absolute inset-0 z-20 crt overflow-auto p-4 flex flex-col items-center"
+      style={{ background: "radial-gradient(circle, #2a0a55, #07020f 80%)" }}>
+      <h2 className="neon text-2xl mb-2" style={{ color: "#ff6ec7" }}>⚔ BOSS PRACTICE ⚔</h2>
+      <p className="text-[10px] opacity-70 mb-4 text-center max-w-md">
+        Fight any boss directly. Unlimited ammo. No score, no leaderboard — just practice.
+      </p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-w-xl w-full">
+        {LEVELS.map((lv, i) => (
+          <button key={lv.id} onClick={() => onPick(i)}
+            className="border-2 p-3 text-left hover:scale-[1.02] transition"
+            style={{ borderColor: lv.boss.color, color: lv.boss.color, boxShadow: `0 0 12px ${lv.boss.color}55` }}>
+            <div className="text-xs opacity-70">LV {lv.id} · {lv.title}</div>
+            <div className="text-sm font-bold">{lv.boss.name}</div>
+            <div className="text-[10px] opacity-80 mt-1" style={{ color: "#e6f7ff" }}>
+              Weapon: {lv.weapon.name}
+            </div>
+          </button>
+        ))}
+      </div>
+      <div className="mt-6"><NeonBtn color="#0ff" onClick={onBack}>← BACK</NeonBtn></div>
     </div>
   );
 }
