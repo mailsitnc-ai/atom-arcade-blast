@@ -5,14 +5,18 @@ import QuizScreen from "./game/QuizScreen";
 import { sfx } from "./game/sound";
 import { loadLB, saveLB, type LBEntry } from "./game/leaderboard";
 
-type Phase = "menu" | "learn-intro" | "quiz" | "play" | "learn-recap" | "gameover" | "leaderboard" | "victory";
+type Phase = "menu" | "learn-intro" | "quiz" | "play" | "learn-recap" | "gameover" | "leaderboard" | "victory" | "practice-select" | "practice-play";
 type V = { x: number; y: number };
 type Bullet = V & { vx: number; vy: number; dmg: number; life: number };
-type PBullet = Bullet & { seek?: boolean; split?: number; trail?: string };
+type PBullet = Bullet & { seek?: boolean; split?: number; trail?: string; puddle?: boolean; chain?: boolean; vortex?: boolean };
 type Enemy = V & { hp: number; cd: number; vx: number; vy: number };
 type Atom = V & { taken: boolean; symbol: string; pulse: number };
 type Particle = V & { vx: number; vy: number; life: number; color: string };
 type Boss = { x: number; y: number; hp: number; maxHp: number; phase: number; cd: number; t: number; introT: number };
+type Puddle = { x: number; y: number; r: number; life: number; dmgCd: number; dmg: number };
+type ChainFx = { points: V[]; life: number };
+type PowerupKind = "heal" | "rapid" | "shield" | "double" | "ammo";
+type Powerup = { x: number; y: number; kind: PowerupKind; t: number };
 
 const W = 800, H = 500;
 const SYMBOLS = ["H", "He", "Li", "C", "N", "O", "Na", "Fe"];
@@ -26,6 +30,7 @@ export default function ChemistryGame() {
   const [lb, setLb] = useState<LBEntry[]>([]);
   const [nameInput, setNameInput] = useState("AAA");
   const [hud, setHud] = useState({ ammo: 10, atomsCollected: 0, enemiesLeft: 8, unlimited: false, bossHp: 0, bossMax: 0, bossActive: false, weapon: "" });
+  const [practiceLevel, setPracticeLevel] = useState(0);
 
   // Stable callback refs so PlayCanvas effect doesn't re-init every frame
   const onCompleteRef = useRef<() => void>(() => {});
@@ -45,6 +50,7 @@ export default function ChemistryGame() {
   const onLevelComplete = () => {
     sfx("win");
     setStats(s => ({ ...s, bosses: s.bosses + 1 }));
+    if (phase === "practice-play") { setPhase("menu"); return; }
     if (levelIdx >= LEVELS.length - 1) {
       setPhase("victory");
     } else {
@@ -54,6 +60,7 @@ export default function ChemistryGame() {
 
   const onPlayerDied = () => {
     sfx("die");
+    if (phase === "practice-play") { setPhase("menu"); return; }
     const newLives = lives - 1;
     setLives(newLives);
     setStats(s => ({ ...s, combo: 0 }));
@@ -105,8 +112,31 @@ export default function ChemistryGame() {
               onHud={onHudRef}
             />
           )}
+          {phase === "practice-play" && (
+            <PlayCanvas
+              key={`practice-${practiceLevel}`}
+              level={LEVELS[practiceLevel]}
+              practice
+              onComplete={onCompleteRef}
+              onDeath={onDeathRef}
+              onScore={onScoreRef}
+              onStat={onStatRef}
+              onHud={onHudRef}
+            />
+          )}
           {phase === "menu" && (
-            <Menu onStart={startGame} onLB={() => setPhase("leaderboard")} lb={lb} />
+            <Menu
+              onStart={startGame}
+              onLB={() => setPhase("leaderboard")}
+              onPractice={() => setPhase("practice-select")}
+              lb={lb}
+            />
+          )}
+          {phase === "practice-select" && (
+            <PracticeSelect
+              onPick={(i) => { setPracticeLevel(i); setLives(3); setPhase("practice-play"); }}
+              onBack={() => setPhase("menu")}
+            />
           )}
           {(phase === "learn-intro" || phase === "learn-recap") && (
             <LearningScreen
@@ -214,7 +244,7 @@ function Overlay({ title, color, children }: any) {
   );
 }
 
-function Menu({ onStart, onLB, lb }: { onStart: () => void; onLB: () => void; lb: LBEntry[] }) {
+function Menu({ onStart, onLB, onPractice, lb }: { onStart: () => void; onLB: () => void; onPractice: () => void; lb: LBEntry[] }) {
   return (
     <div className="absolute inset-0 z-20 flex flex-col items-center justify-center crt p-6"
       style={{ background: "radial-gradient(circle at 50% 30%, #2a0a55, #07020f 70%)" }}>
@@ -223,13 +253,40 @@ function Menu({ onStart, onLB, lb }: { onStart: () => void; onLB: () => void; lb
       <p className="text-[10px] md:text-xs mb-6 max-w-md text-center opacity-80">
         Battle through 5 chemistry-themed levels. Collect atoms, evolve weapons, defeat mutated bosses.
       </p>
-      <div className="flex gap-3 mb-6">
+      <div className="flex flex-wrap gap-3 mb-6 justify-center">
         <NeonBtn color="#39ff14" onClick={onStart}>▶ NEW GAME</NeonBtn>
+        <NeonBtn color="#ff6ec7" onClick={onPractice}>⚔ BOSS PRACTICE</NeonBtn>
         <NeonBtn color="#0ff" onClick={onLB}>★ LEADERBOARD</NeonBtn>
       </div>
       <div className="text-[10px] opacity-70 text-center">
         Top Score: <span style={{color:"#fff176"}}>{lb[0]?.score ?? 0}</span> by {lb[0]?.name ?? "—"}
       </div>
+    </div>
+  );
+}
+
+function PracticeSelect({ onPick, onBack }: { onPick: (i: number) => void; onBack: () => void }) {
+  return (
+    <div className="absolute inset-0 z-20 crt overflow-auto p-4 flex flex-col items-center"
+      style={{ background: "radial-gradient(circle, #2a0a55, #07020f 80%)" }}>
+      <h2 className="neon text-2xl mb-2" style={{ color: "#ff6ec7" }}>⚔ BOSS PRACTICE ⚔</h2>
+      <p className="text-[10px] opacity-70 mb-4 text-center max-w-md">
+        Fight any boss directly. Unlimited ammo. No score, no leaderboard — just practice.
+      </p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-w-xl w-full">
+        {LEVELS.map((lv, i) => (
+          <button key={lv.id} onClick={() => onPick(i)}
+            className="border-2 p-3 text-left hover:scale-[1.02] transition"
+            style={{ borderColor: lv.boss.color, color: lv.boss.color, boxShadow: `0 0 12px ${lv.boss.color}55` }}>
+            <div className="text-xs opacity-70">LV {lv.id} · {lv.title}</div>
+            <div className="text-sm font-bold">{lv.boss.name}</div>
+            <div className="text-[10px] opacity-80 mt-1" style={{ color: "#e6f7ff" }}>
+              Weapon: {lv.weapon.name}
+            </div>
+          </button>
+        ))}
+      </div>
+      <div className="mt-6"><NeonBtn color="#0ff" onClick={onBack}>← BACK</NeonBtn></div>
     </div>
   );
 }
@@ -259,8 +316,9 @@ function Leaderboard({ lb, onBack }: { lb: LBEntry[]; onBack: () => void }) {
 
 // ============== GAME PLAY CANVAS ==============
 
-function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
+function PlayCanvas({ level, practice, onComplete, onDeath, onScore, onStat, onHud }: {
   level: typeof LEVELS[number];
+  practice?: boolean;
   onComplete: React.RefObject<() => void>;
   onDeath: React.RefObject<() => void>;
   onScore: React.RefObject<(n: number) => void>;
@@ -273,7 +331,7 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
   // Reset on level change (or remount due to phase)
   useEffect(() => {
     const enemies: Enemy[] = [];
-    for (let i = 0; i < 8; i++) {
+    if (!practice) for (let i = 0; i < 8; i++) {
       enemies.push({
         x: 80 + Math.random()*(W-160),
         y: 60 + Math.random()*(H-120),
@@ -283,7 +341,7 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
       });
     }
     const atoms: Atom[] = [];
-    for (let i = 0; i < 8; i++) {
+    if (!practice) for (let i = 0; i < 8; i++) {
       atoms.push({
         x: 60 + Math.random()*(W-120),
         y: 60 + Math.random()*(H-120),
@@ -296,31 +354,43 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
       eBullets: [] as Bullet[],
       enemies, atoms,
       particles: [] as Particle[],
-      ammo: 10, unlimited: false, atomsCollected: 0,
+      puddles: [] as Puddle[],
+      chains: [] as ChainFx[],
+      powerups: [] as Powerup[],
+      buffs: { rapid: 0, double: 0, shield: 0 },
+      powerupCd: 360,
+      powerupsSpawned: 0,
+      ammo: practice ? 999 : 10,
+      unlimited: !!practice,
+      atomsCollected: 0,
       keys: {} as Record<string, boolean>,
       mouse: { x: W/2, y: 0, down: false },
-      boss: null as Boss | null,
+      boss: practice ? { x: W/2, y: 80, hp: level.boss.hp, maxHp: level.boss.hp, phase: 0, cd: 120, t: 0, introT: 120 } as Boss : null,
       bossDefeated: false,
       portal: null as { x: number; y: number; t: number } | null,
       bossExtra: { dashCd: 0, minionCd: 0, beamCd: 0, beamT: 0, beamAngle: 0 },
       shake: 0, comboT: 0, combo: 0,
       lastShot: 0, time: 0,
+      practice: !!practice,
     };
-  }, [level.id]);
+  }, [level.id, practice]);
 
   const fire = useCallback(() => {
     const s = stateRef.current; if (!s) return;
-    const cooldown = level.id === 2 ? 260 : level.id === 3 ? 180 : level.id === 5 ? 200 : 140;
+    let cooldown = level.id === 2 ? 260 : level.id === 3 ? 220 : level.id === 4 ? 200 : level.id === 5 ? 280 : 140;
+    if (s.buffs.rapid > 0) cooldown *= 0.5;
     if (s.lastShot && performance.now() - s.lastShot < cooldown) return;
-    if (!s.unlimited && s.ammo <= 0) return;
+    const cost = level.weapon.ammoCost;
+    if (!s.unlimited && s.ammo < cost) return;
     s.lastShot = performance.now();
-    if (!s.unlimited) s.ammo--;
+    if (!s.unlimited) s.ammo -= cost;
     const px = s.player.x, py = s.player.y;
     const dx = s.mouse.x - px, dy = s.mouse.y - py;
     const d = Math.hypot(dx,dy) || 1;
     const aim = Math.atan2(dy, dx);
     const sp = level.weapon.speed;
-    const dmg = level.weapon.damage + Math.floor(s.atomsCollected/3);
+    let dmg = level.weapon.damage + Math.floor(s.atomsCollected/3);
+    if (s.buffs.double > 0) dmg *= 2;
     const mk = (vx: number, vy: number, extra: Partial<PBullet> = {}): PBullet => ({
       x: px, y: py, vx, vy, dmg, life: 90, ...extra,
     });
@@ -336,26 +406,19 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
         }
         break;
       }
-      case 3: { // spray: 5-bullet cone toward mouse
-        for (let i = -2; i <= 2; i++) {
-          const a = aim + i * 0.18;
-          s.bullets.push(mk(Math.cos(a)*sp, Math.sin(a)*sp, { life: 80 }));
-        }
-        break;
-      }
-      case 4: { // homing chain: 3 seeking bullets
+      case 3: { // corrosive puddles — slow lobs that splat into damaging acid pools
         for (let i = -1; i <= 1; i++) {
-          const a = aim + i * 0.35;
-          s.bullets.push(mk(Math.cos(a)*sp*0.8, Math.sin(a)*sp*0.8, { seek: true, life: 110 }));
+          const a = aim + i * 0.22;
+          s.bullets.push(mk(Math.cos(a)*sp, Math.sin(a)*sp, { life: 35, puddle: true }));
         }
         break;
       }
-      case 5: { // fusion orb: heavy splitting projectile + 2 orbiters
-        s.bullets.push(mk(Math.cos(aim)*sp, Math.sin(aim)*sp, { split: 2, life: 90 }));
-        for (let i = 0; i < 2; i++) {
-          const a = aim + (i ? Math.PI/2 : -Math.PI/2);
-          s.bullets.push(mk(Math.cos(a)*sp*0.6, Math.sin(a)*sp*0.6, { life: 50 }));
-        }
+      case 4: { // chain lightning — single fast bolt that arcs to nearby enemies on hit
+        s.bullets.push(mk(Math.cos(aim)*sp, Math.sin(aim)*sp, { chain: true, life: 60 }));
+        break;
+      }
+      case 5: { // singularity vortex — slow heavy orb that pulls enemies in, then implodes
+        s.bullets.push(mk(Math.cos(aim)*sp, Math.sin(aim)*sp, { vortex: true, life: 120 }));
         break;
       }
     }
@@ -405,6 +468,10 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
       p.y = Math.max(15, Math.min(H-15, p.y));
       if (p.iframes > 0) p.iframes--;
       if (s.comboT > 0) s.comboT--; else if (s.combo > 0) s.combo = 0;
+      // Buff timers
+      if (s.buffs.rapid > 0) s.buffs.rapid--;
+      if (s.buffs.double > 0) s.buffs.double--;
+      if (s.buffs.shield > 0) { s.buffs.shield--; if (p.iframes < 2) p.iframes = 2; }
 
       // Bullets
       const newBullets: PBullet[] = [];
@@ -424,6 +491,20 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
             if (sp2 > max) { b.vx = b.vx/sp2*max; b.vy = b.vy/sp2*max; }
           }
         }
+        // Vortex: pull enemies in toward the orb each frame
+        if (b.vortex) {
+          for (const en of s.enemies) {
+            if (en.hp <= 0) continue;
+            const ax = b.x - en.x, ay = b.y - en.y, ad = Math.hypot(ax,ay) || 1;
+            if (ad < 200) { en.x += (ax/ad) * 1.6; en.y += (ay/ad) * 1.6; }
+          }
+          if (s.boss && !s.boss.introT) {
+            const ax = b.x - s.boss.x, ay = b.y - s.boss.y, ad = Math.hypot(ax,ay) || 1;
+            if (ad < 220) { s.boss.x += (ax/ad) * 0.4; s.boss.y += (ay/ad) * 0.2; }
+          }
+          // shrink/spin visually
+          b.vx *= 0.97; b.vy *= 0.97;
+        }
         b.x += b.vx; b.y += b.vy; b.life--;
         if (b.split && b.life === 40) {
           // split into 3 mini-bullets
@@ -433,9 +514,66 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
           }
           b.split = 0;
         }
+        // Puddle bullet expired or off-screen → spawn corrosive puddle
+        if (b.puddle && (b.life <= 0 || b.x < 8 || b.x > W-8 || b.y < 8 || b.y > H-8)) {
+          s.puddles.push({ x: b.x, y: b.y, r: 38, life: 200, dmgCd: 0, dmg: b.dmg });
+          spawnParticles(s, b.x, b.y, "#39ff14", 10);
+        }
+        // Vortex implodes → AoE blast
+        if (b.vortex && b.life <= 0) {
+          spawnParticles(s, b.x, b.y, "#fff176", 36);
+          for (const en of s.enemies) {
+            if (en.hp <= 0) continue;
+            if (Math.hypot(en.x-b.x, en.y-b.y) < 110) {
+              en.hp -= b.dmg * 2;
+              spawnParticles(s, en.x, en.y, "#fff176", 6);
+            }
+          }
+          if (s.boss && !s.boss.introT && Math.hypot(s.boss.x-b.x, s.boss.y-b.y) < 130) {
+            s.boss.hp -= b.dmg * 2;
+            s.shake = 14;
+            if (s.boss.hp <= 0) {
+              spawnParticles(s, s.boss.x, s.boss.y, "#fff176", 60);
+              s.shake = 25; s.bossDefeated = true; s.boss = null;
+              setTimeout(onComplete.current!, 800);
+            }
+          }
+        }
         return b.life > 0 && b.x > -10 && b.x < W+10 && b.y > -10 && b.y < H+10;
       });
       if (newBullets.length) s.bullets.push(...newBullets);
+
+      // Puddles — damage enemies inside, fade out
+      s.puddles = s.puddles.filter((pu: Puddle) => {
+        pu.life--; pu.dmgCd--;
+        if (pu.dmgCd <= 0) {
+          pu.dmgCd = 18;
+          for (const en of s.enemies) {
+            if (en.hp <= 0) continue;
+            if (Math.hypot(en.x-pu.x, en.y-pu.y) < pu.r) {
+              en.hp -= pu.dmg;
+              spawnParticles(s, en.x, en.y, "#39ff14", 3);
+              if (en.hp <= 0) {
+                s.combo++; s.comboT = 90;
+                onStat.current!("combo", 1);
+                onScore.current!(100 + s.combo*10); onStat.current!("enemies", 1);
+              }
+            }
+          }
+          if (s.boss && !s.boss.introT && Math.hypot(s.boss.x-pu.x, s.boss.y-pu.y) < pu.r + 10) {
+            s.boss.hp -= pu.dmg;
+            if (s.boss.hp <= 0) {
+              spawnParticles(s, s.boss.x, s.boss.y, "#fff176", 60);
+              s.shake = 25; s.bossDefeated = true; s.boss = null;
+              setTimeout(onComplete.current!, 800);
+            }
+          }
+        }
+        return pu.life > 0;
+      });
+      // Chain lightning visual decay
+      s.chains = s.chains.filter((c: ChainFx) => { c.life--; return c.life > 0; });
+
       s.eBullets = s.eBullets.filter((b: Bullet) => {
         b.x += b.vx; b.y += b.vy; b.life--;
         if (Math.hypot(b.x-p.x, b.y-p.y) < 14 && p.iframes <= 0) {
@@ -469,7 +607,34 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
         // bullets hit enemy
         for (const b of s.bullets) {
           if (Math.hypot(b.x-e.x, b.y-e.y) < 18) {
-            e.hp -= b.dmg; b.life = 0;
+            e.hp -= b.dmg;
+            // Chain lightning: arc to up to 3 nearby enemies
+            if (b.chain) {
+              const hitSet = new Set<Enemy>([e]);
+              const points: V[] = [{ x: b.x, y: b.y }, { x: e.x, y: e.y }];
+              let from: Enemy = e;
+              for (let k = 0; k < 3; k++) {
+                let next: Enemy | null = null, nd = 160*160;
+                for (const en2 of s.enemies) {
+                  if (en2.hp <= 0 || hitSet.has(en2)) continue;
+                  const dd = (en2.x-from.x)*(en2.x-from.x) + (en2.y-from.y)*(en2.y-from.y);
+                  if (dd < nd) { nd = dd; next = en2; }
+                }
+                if (!next) break;
+                hitSet.add(next);
+                points.push({ x: next.x, y: next.y });
+                next.hp -= Math.max(1, b.dmg - 1);
+                spawnParticles(s, next.x, next.y, "#ff3df0", 5);
+                if (next.hp <= 0) {
+                  s.combo++; s.comboT = 90;
+                  onStat.current!("combo", 1);
+                  onScore.current!(100 + s.combo*10); onStat.current!("enemies", 1);
+                }
+                from = next;
+              }
+              s.chains.push({ points, life: 12 });
+            }
+            b.life = 0;
             spawnParticles(s, e.x, e.y, level.enemyColor, 6);
             if (e.hp <= 0) {
               s.combo++; s.comboT = 90;
@@ -484,6 +649,37 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
         }
       }
       s.enemies = s.enemies.filter((e: Enemy) => e.hp > 0);
+
+      // Powerups — spawn up to 3 per level, randomly over time
+      if (!s.bossDefeated) {
+        s.powerupCd--;
+        if (s.powerupCd <= 0 && s.powerupsSpawned < 3 && s.powerups.length < 2) {
+          s.powerupCd = 480 + Math.floor(Math.random()*240);
+          s.powerupsSpawned++;
+          const kinds: PowerupKind[] = ["heal","rapid","shield","double","ammo"];
+          const kind = kinds[Math.floor(Math.random()*kinds.length)];
+          s.powerups.push({
+            x: 60 + Math.random()*(W-120),
+            y: 60 + Math.random()*(H-120),
+            kind, t: 0,
+          });
+        }
+      }
+      for (const pu of s.powerups) pu.t++;
+      s.powerups = s.powerups.filter((pu: Powerup) => {
+        if (Math.hypot(pu.x-p.x, pu.y-p.y) < 20) {
+          if (pu.kind === "heal") p.hp = Math.min(3, p.hp + 1);
+          else if (pu.kind === "rapid") s.buffs.rapid = 480;
+          else if (pu.kind === "shield") { s.buffs.shield = 360; p.iframes = 360; }
+          else if (pu.kind === "double") s.buffs.double = 480;
+          else if (pu.kind === "ammo") s.ammo += 25;
+          spawnParticles(s, pu.x, pu.y, powerupColor(pu.kind), 22);
+          onScore.current!(40);
+          sfx("atom");
+          return false;
+        }
+        return pu.t < 1200; // despawn after 20s
+      });
 
       // Atoms
       for (const a of s.atoms) {
@@ -501,7 +697,7 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
       }
 
       // Portal appears after enemies cleared — player must enter it to start boss
-      if (s.enemies.length === 0 && !s.boss && !s.bossDefeated && !s.portal) {
+      if (!s.practice && s.enemies.length === 0 && !s.boss && !s.bossDefeated && !s.portal) {
         s.portal = { x: W/2, y: H/2, t: 0 };
       }
       if (s.portal && !s.boss) {
@@ -525,31 +721,31 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
           b.x = Math.max(60, Math.min(W-60, b.x));
           b.cd--;
           if (b.cd <= 0) {
-            b.cd = b.hp < b.maxHp/2 ? 30 : 50;
+            b.cd = b.hp < b.maxHp/2 ? 22 : 38;
             const pat = level.boss.pattern;
             const bullets: Bullet[] = [];
             if (pat === "radial") {
-              for (let i=0;i<10;i++) {
+              for (let i=0;i<14;i++) {
                 const a = (i/10)*Math.PI*2 + b.t*0.01;
                 bullets.push({ x:b.x, y:b.y, vx:Math.cos(a)*3, vy:Math.sin(a)*3, dmg:1, life:200 });
               }
             } else if (pat === "aimed") {
-              for (let i=-1;i<=1;i++) {
+              for (let i=-2;i<=2;i++) {
                 const a = Math.atan2(p.y-b.y, p.x-b.x) + i*0.2;
                 bullets.push({ x:b.x, y:b.y, vx:Math.cos(a)*4, vy:Math.sin(a)*4, dmg:1, life:200 });
               }
             } else if (pat === "spiral") {
-              for (let i=0;i<3;i++) {
+              for (let i=0;i<5;i++) {
                 const a = b.t*0.1 + i*(Math.PI*2/3);
                 bullets.push({ x:b.x, y:b.y, vx:Math.cos(a)*3.5, vy:Math.sin(a)*3.5, dmg:1, life:200 });
               }
             } else if (pat === "burst") {
-              for (let i=0;i<14;i++) {
+              for (let i=0;i<18;i++) {
                 const a = (i/14)*Math.PI*2;
                 bullets.push({ x:b.x, y:b.y, vx:Math.cos(a)*4, vy:Math.sin(a)*4, dmg:1, life:200 });
               }
             } else { // fusion
-              for (let i=0;i<6;i++) {
+              for (let i=0;i<10;i++) {
                 const a = (i/6)*Math.PI*2 + b.t*0.05;
                 bullets.push({ x:b.x, y:b.y, vx:Math.cos(a)*4.5, vy:Math.sin(a)*4.5, dmg:1, life:220 });
               }
@@ -759,7 +955,52 @@ function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
       // bullets player (shadow disabled for perf — using bright fill instead)
       ctx.fillStyle = level.weapon.color;
       for (const b of s.bullets) {
-        ctx.beginPath(); ctx.arc(b.x, b.y, level.weapon.size, 0, Math.PI*2); ctx.fill();
+        if (b.vortex) {
+          // swirling singularity
+          ctx.save();
+          ctx.translate(b.x, b.y);
+          ctx.rotate(s.time * 0.25);
+          ctx.fillStyle = "#000";
+          ctx.beginPath(); ctx.arc(0, 0, level.weapon.size, 0, Math.PI*2); ctx.fill();
+          ctx.strokeStyle = level.weapon.color; ctx.lineWidth = 2;
+          for (let k = 0; k < 3; k++) {
+            ctx.beginPath();
+            ctx.arc(0, 0, level.weapon.size + 4 + k*3, k * 0.4, k * 0.4 + Math.PI*1.4);
+            ctx.stroke();
+          }
+          ctx.restore();
+          ctx.fillStyle = level.weapon.color;
+        } else {
+          ctx.beginPath(); ctx.arc(b.x, b.y, level.weapon.size, 0, Math.PI*2); ctx.fill();
+        }
+      }
+      // Acid puddles
+      for (const pu of s.puddles) {
+        const a = Math.min(0.55, pu.life / 200 * 0.55);
+        ctx.fillStyle = `rgba(57,255,20,${a})`;
+        ctx.beginPath(); ctx.arc(pu.x, pu.y, pu.r, 0, Math.PI*2); ctx.fill();
+        ctx.strokeStyle = `rgba(120,255,80,${a + 0.2})`; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(pu.x, pu.y, pu.r, 0, Math.PI*2); ctx.stroke();
+      }
+      // Chain lightning bolts
+      for (const c of s.chains) {
+        ctx.strokeStyle = `rgba(255,61,240,${c.life/12})`; ctx.lineWidth = 3;
+        ctx.beginPath();
+        for (let i = 0; i < c.points.length; i++) {
+          const pt = c.points[i];
+          if (i === 0) ctx.moveTo(pt.x, pt.y);
+          else {
+            const prev = c.points[i-1];
+            const mx = (pt.x + prev.x)/2 + (Math.random()-0.5)*14;
+            const my = (pt.y + prev.y)/2 + (Math.random()-0.5)*14;
+            ctx.lineTo(mx, my); ctx.lineTo(pt.x, pt.y);
+          }
+        }
+        ctx.stroke();
+      }
+      // Powerups
+      for (const pu of s.powerups) {
+        drawPowerup(ctx, pu);
       }
       // bullets enemy
       ctx.fillStyle = "#ff2e2e";
@@ -863,6 +1104,35 @@ function spawnParticles(s: any, x: number, y: number, color: string, n: number) 
     const a = Math.random()*Math.PI*2, sp = Math.random()*4+1;
     s.particles.push({ x, y, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp, life: 20+Math.random()*15, color });
   }
+}
+
+function powerupColor(k: PowerupKind): string {
+  return k === "heal" ? "#ff2e2e"
+       : k === "rapid" ? "#fff176"
+       : k === "shield" ? "#22e0d0"
+       : k === "double" ? "#ff3df0"
+       : "#39ff14";
+}
+
+function drawPowerup(ctx: CanvasRenderingContext2D, pu: Powerup) {
+  const col = powerupColor(pu.kind);
+  const bob = Math.sin(pu.t * 0.12) * 3;
+  const x = pu.x, y = pu.y + bob;
+  ctx.save();
+  ctx.shadowBlur = 14; ctx.shadowColor = col;
+  ctx.fillStyle = "#000";
+  ctx.fillRect(x-12, y-12, 24, 24);
+  ctx.fillStyle = col;
+  ctx.fillRect(x-10, y-10, 20, 20);
+  ctx.fillStyle = "#000";
+  ctx.font = "bold 14px monospace"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  const ch = pu.kind === "heal" ? "+"
+           : pu.kind === "rapid" ? "R"
+           : pu.kind === "shield" ? "S"
+           : pu.kind === "double" ? "x2"
+           : "A";
+  ctx.fillText(ch, x, y + 1);
+  ctx.restore();
 }
 
 function drawBoss(

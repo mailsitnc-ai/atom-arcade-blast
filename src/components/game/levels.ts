@@ -2,7 +2,7 @@ export type LevelDef = {
   id: number;
   title: string;
   concept: string;
-  weapon: { name: string; color: string; speed: number; size: number; damage: number };
+  weapon: { name: string; color: string; speed: number; size: number; damage: number; ammoCost: number };
   bgA: string;
   bgB: string;
   enemyColor: string;
@@ -31,10 +31,10 @@ export const LEVELS: LevelDef[] = [
     id: 1,
     title: "Atomic Structure",
     concept: "Inside the Atom",
-    weapon: { name: "Electron Beam (Straight)", color: "#7df9ff", speed: 9, size: 5, damage: 1 },
+    weapon: { name: "Electron Beam (Straight)", color: "#7df9ff", speed: 9, size: 5, damage: 1, ammoCost: 1 },
     bgA: "#0a0628", bgB: "#1a0a4a",
-    enemyColor: "#ff6ec7", enemySpeed: 1.2, enemyHp: 2,
-    boss: { name: "Radioactive Slime", color: "#7CFC00", hp: 60, speed: 1.4, pattern: "radial", intro: "WARNING: UNSTABLE ISOTOPE" },
+    enemyColor: "#ff6ec7", enemySpeed: 1.2, enemyHp: 3,
+    boss: { name: "Radioactive Slime", color: "#7CFC00", hp: 75, speed: 1.5, pattern: "radial", intro: "WARNING: UNSTABLE ISOTOPE" },
     quiz: [
       { q: "Which particle has a positive charge?", choices: ["Electron", "Proton", "Neutron"], answer: 1 },
       { q: "Where are electrons found?", choices: ["In the nucleus", "Orbiting the nucleus", "Inside protons"], answer: 1 },
@@ -56,10 +56,10 @@ export const LEVELS: LevelDef[] = [
     id: 2,
     title: "Chemical Bonding",
     concept: "How Atoms Connect",
-    weapon: { name: "Molecular Shield Burst (360°)", color: "#b388ff", speed: 9, size: 6, damage: 2 },
+    weapon: { name: "Molecular Shield Burst (360°)", color: "#b388ff", speed: 9, size: 6, damage: 2, ammoCost: 2 },
     bgA: "#0d0233", bgB: "#2a0a55",
-    enemyColor: "#ffb86c", enemySpeed: 1.5, enemyHp: 2,
-    boss: { name: "Unstable Molecule Titan", color: "#ff5e94", hp: 90, speed: 1.6, pattern: "aimed", intro: "BOND OVERLOAD DETECTED" },
+    enemyColor: "#ffb86c", enemySpeed: 1.5, enemyHp: 3,
+    boss: { name: "Unstable Molecule Titan", color: "#ff5e94", hp: 110, speed: 1.7, pattern: "aimed", intro: "BOND OVERLOAD DETECTED" },
     quiz: [
       { q: "Which bond involves SHARING electrons?", choices: ["Ionic", "Covalent", "Metallic"], answer: 1 },
       { q: "An ionic bond happens when atoms…", choices: ["Share electrons equally", "Transfer electrons", "Ignore each other"], answer: 1 },
@@ -81,10 +81,10 @@ export const LEVELS: LevelDef[] = [
     id: 3,
     title: "Acids & Bases",
     concept: "The pH Scale",
-    weapon: { name: "Acid Spray (5-Cone)", color: "#39ff14", speed: 9, size: 7, damage: 2 },
+    weapon: { name: "Corrosive Puddles", color: "#39ff14", speed: 7, size: 8, damage: 2, ammoCost: 3 },
     bgA: "#04231a", bgB: "#0a4a2e",
     enemyColor: "#39ff14", enemySpeed: 1.8, enemyHp: 3,
-    boss: { name: "Plasma Reactor Robot", color: "#00e5ff", hp: 130, speed: 1.8, pattern: "spiral", intro: "pH CRITICAL — CORROSIVE MODE" },
+    boss: { name: "Plasma Reactor Robot", color: "#00e5ff", hp: 160, speed: 2.0, pattern: "spiral", intro: "pH CRITICAL — CORROSIVE MODE" },
     quiz: [
       { q: "Pure water has a pH of…", choices: ["1", "7", "14"], answer: 1 },
       { q: "Acids release which ion?", choices: ["H⁺", "OH⁻", "Na⁺"], answer: 0 },
@@ -106,10 +106,10 @@ export const LEVELS: LevelDef[] = [
     id: 4,
     title: "Chemical Reactions",
     concept: "Reactants → Products",
-    weapon: { name: "Homing Chain Reaction", color: "#ff3df0", speed: 10, size: 7, damage: 3 },
+    weapon: { name: "Chain Lightning", color: "#ff3df0", speed: 12, size: 6, damage: 3, ammoCost: 4 },
     bgA: "#22041a", bgB: "#5a0a3a",
     enemyColor: "#ff3df0", enemySpeed: 2.1, enemyHp: 3,
-    boss: { name: "Toxic Mutation Beast", color: "#ff2e2e", hp: 180, speed: 2.0, pattern: "burst", intro: "EXOTHERMIC RAGE INCOMING" },
+    boss: { name: "Toxic Mutation Beast", color: "#ff2e2e", hp: 220, speed: 2.2, pattern: "burst", intro: "EXOTHERMIC RAGE INCOMING" },
     quiz: [
       { q: "What are the starting materials called?", choices: ["Products", "Reactants", "Catalysts"], answer: 1 },
       { q: "An exothermic reaction…", choices: ["Absorbs energy", "Releases energy", "Does neither"], answer: 1 },
@@ -131,10 +131,10 @@ export const LEVELS: LevelDef[] = [
     id: 5,
     title: "Periodic Table & Fusion",
     concept: "Element Fusion",
-    weapon: { name: "Fusion Orb (Splits ×3)", color: "#fff176", speed: 11, size: 10, damage: 4 },
+    weapon: { name: "Singularity Vortex", color: "#fff176", speed: 6, size: 14, damage: 4, ammoCost: 5 },
     bgA: "#2a1a04", bgB: "#5a3a0a",
     enemyColor: "#fff176", enemySpeed: 2.4, enemyHp: 4,
-    boss: { name: "Fusion-Core Final Boss", color: "#ffe600", hp: 260, speed: 2.2, pattern: "fusion", intro: "STELLAR CORE IGNITED" },
+    boss: { name: "Fusion-Core Final Boss", color: "#ffe600", hp: 320, speed: 2.4, pattern: "fusion", intro: "STELLAR CORE IGNITED" },
     quiz: [
       { q: "Rows on the periodic table are called…", choices: ["Groups", "Periods", "Families"], answer: 1 },
       { q: "Fusion combines small atoms into…", choices: ["Smaller atoms", "Bigger atoms + energy", "Pure light only"], answer: 1 },
