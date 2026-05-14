@@ -955,7 +955,52 @@ function PlayCanvas({ level, practice, onComplete, onDeath, onScore, onStat, onH
       // bullets player (shadow disabled for perf — using bright fill instead)
       ctx.fillStyle = level.weapon.color;
       for (const b of s.bullets) {
-        ctx.beginPath(); ctx.arc(b.x, b.y, level.weapon.size, 0, Math.PI*2); ctx.fill();
+        if (b.vortex) {
+          // swirling singularity
+          ctx.save();
+          ctx.translate(b.x, b.y);
+          ctx.rotate(s.time * 0.25);
+          ctx.fillStyle = "#000";
+          ctx.beginPath(); ctx.arc(0, 0, level.weapon.size, 0, Math.PI*2); ctx.fill();
+          ctx.strokeStyle = level.weapon.color; ctx.lineWidth = 2;
+          for (let k = 0; k < 3; k++) {
+            ctx.beginPath();
+            ctx.arc(0, 0, level.weapon.size + 4 + k*3, k * 0.4, k * 0.4 + Math.PI*1.4);
+            ctx.stroke();
+          }
+          ctx.restore();
+          ctx.fillStyle = level.weapon.color;
+        } else {
+          ctx.beginPath(); ctx.arc(b.x, b.y, level.weapon.size, 0, Math.PI*2); ctx.fill();
+        }
+      }
+      // Acid puddles
+      for (const pu of s.puddles) {
+        const a = Math.min(0.55, pu.life / 200 * 0.55);
+        ctx.fillStyle = `rgba(57,255,20,${a})`;
+        ctx.beginPath(); ctx.arc(pu.x, pu.y, pu.r, 0, Math.PI*2); ctx.fill();
+        ctx.strokeStyle = `rgba(120,255,80,${a + 0.2})`; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(pu.x, pu.y, pu.r, 0, Math.PI*2); ctx.stroke();
+      }
+      // Chain lightning bolts
+      for (const c of s.chains) {
+        ctx.strokeStyle = `rgba(255,61,240,${c.life/12})`; ctx.lineWidth = 3;
+        ctx.beginPath();
+        for (let i = 0; i < c.points.length; i++) {
+          const pt = c.points[i];
+          if (i === 0) ctx.moveTo(pt.x, pt.y);
+          else {
+            const prev = c.points[i-1];
+            const mx = (pt.x + prev.x)/2 + (Math.random()-0.5)*14;
+            const my = (pt.y + prev.y)/2 + (Math.random()-0.5)*14;
+            ctx.lineTo(mx, my); ctx.lineTo(pt.x, pt.y);
+          }
+        }
+        ctx.stroke();
+      }
+      // Powerups
+      for (const pu of s.powerups) {
+        drawPowerup(ctx, pu);
       }
       // bullets enemy
       ctx.fillStyle = "#ff2e2e";
