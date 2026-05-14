@@ -668,11 +668,13 @@ function PlayCanvas({ level, practice, onComplete, onDeath, onScore, onStat, onH
       for (const pu of s.powerups) pu.t++;
       s.powerups = s.powerups.filter((pu: Powerup) => {
         if (Math.hypot(pu.x-p.x, pu.y-p.y) < 20) {
-          if (pu.kind === "heal") p.hp = Math.min(3, p.hp + 1);
-          else if (pu.kind === "rapid") s.buffs.rapid = 480;
-          else if (pu.kind === "shield") { s.buffs.shield = 360; p.iframes = 360; }
-          else if (pu.kind === "double") s.buffs.double = 480;
-          else if (pu.kind === "ammo") s.ammo += 25;
+          let msg = "";
+          if (pu.kind === "heal") { p.hp = Math.min(3, p.hp + 1); msg = "HEAL +1 HP"; }
+          else if (pu.kind === "rapid") { s.buffs.rapid = 480; msg = "RAPID FIRE — 8s (cooldown halved)"; }
+          else if (pu.kind === "shield") { s.buffs.shield = 360; p.iframes = 360; msg = "SHIELD — 6s invincibility"; }
+          else if (pu.kind === "double") { s.buffs.double = 480; msg = "DOUBLE DAMAGE — 8s"; }
+          else if (pu.kind === "ammo") { s.ammo += 25; msg = "AMMO +25"; }
+          s.toast = { text: msg, color: powerupColor(pu.kind), life: 120 };
           spawnParticles(s, pu.x, pu.y, powerupColor(pu.kind), 22);
           onScore.current!(40);
           sfx("atom");
