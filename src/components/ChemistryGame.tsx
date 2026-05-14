@@ -1106,6 +1106,35 @@ function spawnParticles(s: any, x: number, y: number, color: string, n: number) 
   }
 }
 
+function powerupColor(k: PowerupKind): string {
+  return k === "heal" ? "#ff2e2e"
+       : k === "rapid" ? "#fff176"
+       : k === "shield" ? "#22e0d0"
+       : k === "double" ? "#ff3df0"
+       : "#39ff14";
+}
+
+function drawPowerup(ctx: CanvasRenderingContext2D, pu: Powerup) {
+  const col = powerupColor(pu.kind);
+  const bob = Math.sin(pu.t * 0.12) * 3;
+  const x = pu.x, y = pu.y + bob;
+  ctx.save();
+  ctx.shadowBlur = 14; ctx.shadowColor = col;
+  ctx.fillStyle = "#000";
+  ctx.fillRect(x-12, y-12, 24, 24);
+  ctx.fillStyle = col;
+  ctx.fillRect(x-10, y-10, 20, 20);
+  ctx.fillStyle = "#000";
+  ctx.font = "bold 14px monospace"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  const ch = pu.kind === "heal" ? "+"
+           : pu.kind === "rapid" ? "R"
+           : pu.kind === "shield" ? "S"
+           : pu.kind === "double" ? "x2"
+           : "A";
+  ctx.fillText(ch, x, y + 1);
+  ctx.restore();
+}
+
 function drawBoss(
   ctx: CanvasRenderingContext2D,
   b: { x: number; y: number; t: number; hp: number; maxHp: number },
