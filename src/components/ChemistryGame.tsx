@@ -721,31 +721,31 @@ function PlayCanvas({ level, practice, onComplete, onDeath, onScore, onStat, onH
           b.x = Math.max(60, Math.min(W-60, b.x));
           b.cd--;
           if (b.cd <= 0) {
-            b.cd = b.hp < b.maxHp/2 ? 30 : 50;
+            b.cd = b.hp < b.maxHp/2 ? 22 : 38;
             const pat = level.boss.pattern;
             const bullets: Bullet[] = [];
             if (pat === "radial") {
-              for (let i=0;i<10;i++) {
+              for (let i=0;i<14;i++) {
                 const a = (i/10)*Math.PI*2 + b.t*0.01;
                 bullets.push({ x:b.x, y:b.y, vx:Math.cos(a)*3, vy:Math.sin(a)*3, dmg:1, life:200 });
               }
             } else if (pat === "aimed") {
-              for (let i=-1;i<=1;i++) {
+              for (let i=-2;i<=2;i++) {
                 const a = Math.atan2(p.y-b.y, p.x-b.x) + i*0.2;
                 bullets.push({ x:b.x, y:b.y, vx:Math.cos(a)*4, vy:Math.sin(a)*4, dmg:1, life:200 });
               }
             } else if (pat === "spiral") {
-              for (let i=0;i<3;i++) {
+              for (let i=0;i<5;i++) {
                 const a = b.t*0.1 + i*(Math.PI*2/3);
                 bullets.push({ x:b.x, y:b.y, vx:Math.cos(a)*3.5, vy:Math.sin(a)*3.5, dmg:1, life:200 });
               }
             } else if (pat === "burst") {
-              for (let i=0;i<14;i++) {
+              for (let i=0;i<18;i++) {
                 const a = (i/14)*Math.PI*2;
                 bullets.push({ x:b.x, y:b.y, vx:Math.cos(a)*4, vy:Math.sin(a)*4, dmg:1, life:200 });
               }
             } else { // fusion
-              for (let i=0;i<6;i++) {
+              for (let i=0;i<10;i++) {
                 const a = (i/6)*Math.PI*2 + b.t*0.05;
                 bullets.push({ x:b.x, y:b.y, vx:Math.cos(a)*4.5, vy:Math.sin(a)*4.5, dmg:1, life:220 });
               }
