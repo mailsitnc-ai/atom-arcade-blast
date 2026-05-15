@@ -958,9 +958,69 @@ function PlayCanvas({ level, practice = false, onComplete, onDeath, onScore, onS
       }
 
       // bullets player (shadow disabled for perf — using bright fill instead)
+      // acid pools (under bullets)
+      for (const pl of s.pools) {
+        const a = Math.min(1, pl.life/40);
+        ctx.fillStyle = `rgba(57,255,20,${0.18*a})`;
+        ctx.beginPath(); ctx.arc(pl.x, pl.y, pl.r, 0, Math.PI*2); ctx.fill();
+        ctx.strokeStyle = `rgba(57,255,20,${0.7*a})`; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(pl.x, pl.y, pl.r + Math.sin(pl.tick*0.2)*2, 0, Math.PI*2); ctx.stroke();
+        // bubbles
+        ctx.fillStyle = `rgba(180,255,140,${0.6*a})`;
+        for (let i=0;i<3;i++){
+          const ang = pl.tick*0.05 + i*2;
+          ctx.beginPath(); ctx.arc(pl.x+Math.cos(ang)*pl.r*0.5, pl.y+Math.sin(ang)*pl.r*0.5, 3, 0, Math.PI*2); ctx.fill();
+        }
+      }
+      // fusion blasts (expanding rings)
+      for (const bl of s.blasts) {
+        const a = Math.max(0, bl.life/22);
+        ctx.strokeStyle = `rgba(255,241,118,${a})`; ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.arc(bl.x, bl.y, bl.r, 0, Math.PI*2); ctx.stroke();
+        ctx.fillStyle = `rgba(255,241,118,${0.18*a})`;
+        ctx.beginPath(); ctx.arc(bl.x, bl.y, bl.r, 0, Math.PI*2); ctx.fill();
+      }
       ctx.fillStyle = level.weapon.color;
       for (const b of s.bullets) {
         ctx.beginPath(); ctx.arc(b.x, b.y, level.weapon.size, 0, Math.PI*2); ctx.fill();
+      }
+      // chain lightning zaps
+      for (const z of s.zaps) {
+        const a = Math.max(0, z.life/14);
+        ctx.strokeStyle = `rgba(255,61,240,${a})`; ctx.lineWidth = 3;
+        ctx.beginPath();
+        for (let i=0;i<z.points.length;i++){
+          const pt = z.points[i];
+          // jitter
+          const jx = pt.x + (i===0||i===z.points.length-1 ? 0 : (Math.random()-0.5)*8);
+          const jy = pt.y + (i===0||i===z.points.length-1 ? 0 : (Math.random()-0.5)*8);
+          if (i===0) ctx.moveTo(jx, jy); else ctx.lineTo(jx, jy);
+        }
+        ctx.stroke();
+        ctx.strokeStyle = `rgba(255,255,255,${a})`; ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+      // powerups
+      for (const pu of s.powerups) {
+        if (pu.taken) continue;
+        const info = POWER_INFO[pu.kind as PowerType];
+        const r = 12 + Math.sin(pu.pulse)*2;
+        ctx.save();
+        ctx.translate(pu.x, pu.y);
+        ctx.rotate(pu.pulse*0.3);
+        ctx.fillStyle = info.color;
+        ctx.beginPath();
+        for (let i=0;i<6;i++){
+          const a = (i/6)*Math.PI*2;
+          const rr = i%2===0 ? r : r*0.55;
+          const px = Math.cos(a)*rr, py = Math.sin(a)*rr;
+          if (i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+        }
+        ctx.closePath(); ctx.fill();
+        ctx.restore();
+        ctx.fillStyle = "#000"; ctx.font = "bold 10px monospace"; ctx.textAlign = "center";
+        const letter = pu.kind === "heal" ? "+" : pu.kind === "shield" ? "S" : pu.kind === "rapid" ? "R" : pu.kind === "damage" ? "D" : "A";
+        ctx.fillText(letter, pu.x, pu.y + 4);
       }
       // bullets enemy
       ctx.fillStyle = "#ff2e2e";
