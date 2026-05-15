@@ -1069,6 +1069,44 @@ function PlayCanvas({ level, practice = false, onComplete, onDeath, onScore, onS
         ctx.shadowBlur = 0;
       }
 
+      // shield ring around player
+      if (s.buffs.shield > 0) {
+        ctx.strokeStyle = `rgba(125,249,255,${0.5 + 0.4*Math.sin(s.time*0.3)})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(p.x, p.y, 22, 0, Math.PI*2); ctx.stroke();
+      }
+
+      // active buff icons (right side)
+      const buffList: { k: PowerType; t: number }[] = [];
+      if (s.buffs.shield > 0) buffList.push({ k: "shield", t: s.buffs.shield });
+      if (s.buffs.rapid > 0)  buffList.push({ k: "rapid",  t: s.buffs.rapid });
+      if (s.buffs.damage > 0) buffList.push({ k: "damage", t: s.buffs.damage });
+      buffList.forEach((bf, i) => {
+        const info = POWER_INFO[bf.k];
+        const bx = W - 18, by = 18 + i*22;
+        ctx.fillStyle = info.color;
+        ctx.fillRect(bx-10, by-8, 20, 16);
+        ctx.fillStyle = "#000"; ctx.font = "bold 10px monospace"; ctx.textAlign = "center";
+        const letter = bf.k === "shield" ? "S" : bf.k === "rapid" ? "R" : "D";
+        ctx.fillText(letter, bx, by + 3);
+        // timer bar
+        ctx.fillStyle = info.color; ctx.fillRect(bx-10, by+9, 20*(bf.t/360), 2);
+      });
+
+      // banner (powerup pickup announcement)
+      if (s.banner) {
+        const a = Math.min(1, s.banner.t / 30);
+        ctx.fillStyle = `rgba(0,0,0,${0.7*a})`;
+        ctx.fillRect(W/2 - 160, 40, 320, 50);
+        ctx.strokeStyle = s.banner.color; ctx.lineWidth = 2;
+        ctx.strokeRect(W/2 - 160, 40, 320, 50);
+        ctx.fillStyle = s.banner.color; ctx.textAlign = "center";
+        ctx.font = "bold 16px monospace";
+        ctx.fillText(s.banner.text, W/2, 62);
+        ctx.fillStyle = "#fff"; ctx.font = "10px monospace";
+        ctx.fillText(s.banner.sub, W/2, 80);
+      }
+
       ctx.restore();
 
       // Throttle HUD updates to ~10fps to prevent React re-render lag
