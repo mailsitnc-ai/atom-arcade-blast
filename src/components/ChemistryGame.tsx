@@ -243,7 +243,7 @@ function Overlay({ title, color, children }: any) {
   );
 }
 
-function Menu({ onStart, onLB, lb }: { onStart: () => void; onLB: () => void; lb: LBEntry[] }) {
+function Menu({ onStart, onLB, onPractice, lb }: { onStart: () => void; onLB: () => void; onPractice: () => void; lb: LBEntry[] }) {
   return (
     <div className="absolute inset-0 z-20 flex flex-col items-center justify-center crt p-6"
       style={{ background: "radial-gradient(circle at 50% 30%, #2a0a55, #07020f 70%)" }}>
@@ -252,8 +252,9 @@ function Menu({ onStart, onLB, lb }: { onStart: () => void; onLB: () => void; lb
       <p className="text-[10px] md:text-xs mb-6 max-w-md text-center opacity-80">
         Battle through 5 chemistry-themed levels. Collect atoms, evolve weapons, defeat mutated bosses.
       </p>
-      <div className="flex gap-3 mb-6">
+      <div className="flex gap-3 mb-6 flex-wrap justify-center">
         <NeonBtn color="#39ff14" onClick={onStart}>▶ NEW GAME</NeonBtn>
+        <NeonBtn color="#ff6ec7" onClick={onPractice}>⚔ BOSS PRACTICE</NeonBtn>
         <NeonBtn color="#0ff" onClick={onLB}>★ LEADERBOARD</NeonBtn>
       </div>
       <div className="text-[10px] opacity-70 text-center">
