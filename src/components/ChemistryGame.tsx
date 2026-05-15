@@ -344,7 +344,8 @@ function PlayCanvas({ level, practice = false, onComplete, onDeath, onScore, onS
   // Reset on level change (or remount due to phase)
   useEffect(() => {
     const enemies: Enemy[] = [];
-    for (let i = 0; i < 8; i++) {
+    const enemyCount = practice ? 0 : 8;
+    for (let i = 0; i < enemyCount; i++) {
       enemies.push({
         x: 80 + Math.random()*(W-160),
         y: 60 + Math.random()*(H-120),
@@ -354,30 +355,56 @@ function PlayCanvas({ level, practice = false, onComplete, onDeath, onScore, onS
       });
     }
     const atoms: Atom[] = [];
-    for (let i = 0; i < 8; i++) {
+    const atomCount = practice ? 0 : 8;
+    for (let i = 0; i < atomCount; i++) {
       atoms.push({
         x: 60 + Math.random()*(W-120),
         y: 60 + Math.random()*(H-120),
         taken: false, symbol: SYMBOLS[i], pulse: Math.random()*Math.PI*2,
       });
     }
+    // Spawn 3 random powerups (none in practice — unlimited ammo + invuln-restart already)
+    const powerups: Powerup[] = [];
+    if (!practice) {
+      const kinds: PowerType[] = ["heal","shield","rapid","damage","ammo"];
+      for (let i = kinds.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random()*(i+1));
+        [kinds[i], kinds[j]] = [kinds[j], kinds[i]];
+      }
+      for (let i = 0; i < 3; i++) {
+        powerups.push({
+          x: 80 + Math.random()*(W-160),
+          y: 80 + Math.random()*(H-160),
+          kind: kinds[i], taken: false, pulse: Math.random()*Math.PI*2,
+        });
+      }
+    }
     stateRef.current = {
       player: { x: 30, y: H/2, hp: 3, iframes: 0 },
       bullets: [] as Bullet[],
       eBullets: [] as Bullet[],
       enemies, atoms,
+      powerups,
+      pools: [] as Pool[],
+      zaps: [] as Zap[],
+      blasts: [] as Blast[],
+      buffs: { rapid: 0, damage: 0, shield: 0 },
+      banner: null as null | { text: string; sub: string; color: string; t: number },
       particles: [] as Particle[],
-      ammo: 10, unlimited: false, atomsCollected: 0,
+      ammo: practice ? 999 : 10, unlimited: practice, atomsCollected: practice ? 8 : 0,
       keys: {} as Record<string, boolean>,
       mouse: { x: W/2, y: 0, down: false },
-      boss: null as Boss | null,
+      boss: practice
+        ? { x: W/2, y: 80, hp: level.boss.hp, maxHp: level.boss.hp, phase: 0, cd: 120, t: 0, introT: 120 }
+        : (null as Boss | null),
       bossDefeated: false,
       portal: null as { x: number; y: number; t: number } | null,
       bossExtra: { dashCd: 0, minionCd: 0, beamCd: 0, beamT: 0, beamAngle: 0 },
       shake: 0, comboT: 0, combo: 0,
       lastShot: 0, time: 0,
+      practice,
     };
-  }, [level.id]);
+  }, [level.id, practice]);
 
   const fire = useCallback(() => {
     const s = stateRef.current; if (!s) return;
