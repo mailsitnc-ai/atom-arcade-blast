@@ -5,7 +5,7 @@ import QuizScreen from "./game/QuizScreen";
 import { sfx } from "./game/sound";
 import { loadLB, saveLB, type LBEntry } from "./game/leaderboard";
 
-type Phase = "menu" | "learn-intro" | "quiz" | "play" | "learn-recap" | "gameover" | "leaderboard" | "victory";
+type Phase = "menu" | "learn-intro" | "quiz" | "play" | "learn-recap" | "gameover" | "leaderboard" | "victory" | "boss-select" | "boss-practice";
 type V = { x: number; y: number };
 type Bullet = V & { vx: number; vy: number; dmg: number; life: number };
 type PBullet = Bullet & { seek?: boolean; split?: number; trail?: string };
@@ -26,6 +26,8 @@ export default function ChemistryGame() {
   const [lb, setLb] = useState<LBEntry[]>([]);
   const [nameInput, setNameInput] = useState("AAA");
   const [hud, setHud] = useState({ ammo: 10, atomsCollected: 0, enemiesLeft: 8, unlimited: false, bossHp: 0, bossMax: 0, bossActive: false, weapon: "" });
+  const [practiceIdx, setPracticeIdx] = useState(0);
+  const [practiceKey, setPracticeKey] = useState(0);
 
   // Stable callback refs so PlayCanvas effect doesn't re-init every frame
   const onCompleteRef = useRef<() => void>(() => {});
@@ -44,6 +46,10 @@ export default function ChemistryGame() {
 
   const onLevelComplete = () => {
     sfx("win");
+    if (phase === "boss-practice") {
+      setPhase("boss-select");
+      return;
+    }
     setStats(s => ({ ...s, bosses: s.bosses + 1 }));
     if (levelIdx >= LEVELS.length - 1) {
       setPhase("victory");
@@ -54,6 +60,11 @@ export default function ChemistryGame() {
 
   const onPlayerDied = () => {
     sfx("die");
+    if (phase === "boss-practice") {
+      // In practice mode, just restart the same boss without losing lives
+      setPracticeKey(k => k + 1);
+      return;
+    }
     const newLives = lives - 1;
     setLives(newLives);
     setStats(s => ({ ...s, combo: 0 }));
