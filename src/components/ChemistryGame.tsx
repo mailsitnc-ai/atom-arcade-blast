@@ -726,7 +726,7 @@ function PlayCanvas({ level, practice = false, onComplete, onDeath, onScore, onS
           b.x = Math.max(60, Math.min(W-60, b.x));
           b.cd--;
           if (b.cd <= 0) {
-            b.cd = b.hp < b.maxHp/2 ? 30 : 50;
+            b.cd = b.hp < b.maxHp/2 ? 22 : 38;
             const pat = level.boss.pattern;
             const bullets: Bullet[] = [];
             if (pat === "radial") {
