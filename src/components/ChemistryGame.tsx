@@ -548,12 +548,11 @@ function PlayCanvas({ level, practice = false, onComplete, onDeath, onScore, onS
           }
         }
         b.x += b.vx; b.y += b.vy; b.life--;
-        if (b.split && b.life === 40) {
-          // split into 3 mini-bullets
-          for (let i = -1; i <= 1; i++) {
-            const a = Math.atan2(b.vy, b.vx) + i * 0.4;
-            newBullets.push({ x: b.x, y: b.y, vx: Math.cos(a)*level.weapon.speed*0.9, vy: Math.sin(a)*level.weapon.speed*0.9, dmg: Math.max(1, b.dmg-1), life: 50 });
-          }
+        // Fusion Nova orb: detonate into AoE blast when life expires (only if it didn't already explode)
+        if (b.split && b.life <= 0) {
+          s.blasts.push({ x: b.x, y: b.y, r: 8, maxR: 95, life: 22, dmg: b.dmg + 2, hit: new Set() });
+          spawnParticles(s, b.x, b.y, "#fff176", 28);
+          s.shake = 10;
           b.split = 0;
         }
         return b.life > 0 && b.x > -10 && b.x < W+10 && b.y > -10 && b.y < H+10;
