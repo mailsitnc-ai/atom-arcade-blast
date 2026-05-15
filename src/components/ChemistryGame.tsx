@@ -116,8 +116,26 @@ export default function ChemistryGame() {
               onHud={onHudRef}
             />
           )}
+          {phase === "boss-practice" && (
+            <PlayCanvas
+              key={`practice-${practiceIdx}-${practiceKey}`}
+              level={LEVELS[practiceIdx]}
+              practice
+              onComplete={onCompleteRef}
+              onDeath={onDeathRef}
+              onScore={onScoreRef}
+              onStat={onStatRef}
+              onHud={onHudRef}
+            />
+          )}
           {phase === "menu" && (
-            <Menu onStart={startGame} onLB={() => setPhase("leaderboard")} lb={lb} />
+            <Menu onStart={startGame} onLB={() => setPhase("leaderboard")} onPractice={() => setPhase("boss-select")} lb={lb} />
+          )}
+          {phase === "boss-select" && (
+            <BossSelect
+              onPick={(i) => { setPracticeIdx(i); setPracticeKey(k => k + 1); setPhase("boss-practice"); }}
+              onBack={() => setPhase("menu")}
+            />
           )}
           {(phase === "learn-intro" || phase === "learn-recap") && (
             <LearningScreen
