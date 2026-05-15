@@ -287,6 +287,33 @@ function Leaderboard({ lb, onBack }: { lb: LBEntry[]; onBack: () => void }) {
   );
 }
 
+function BossSelect({ onPick, onBack }: { onPick: (i: number) => void; onBack: () => void }) {
+  return (
+    <div className="absolute inset-0 z-20 crt overflow-auto p-4"
+      style={{ background: "radial-gradient(circle, #2a0a55, #07020f 80%)" }}>
+      <h2 className="neon text-2xl text-center mb-1" style={{ color: "#ff6ec7" }}>⚔ BOSS PRACTICE ⚔</h2>
+      <p className="text-[10px] text-center opacity-70 mb-4">No lives lost · Unlimited ammo · Master each boss</p>
+      <div className="max-w-xl mx-auto grid gap-2">
+        {LEVELS.map((lv, i) => (
+          <button key={i} onClick={() => onPick(i)}
+            className="text-left p-3 border-2 hover:scale-[1.02] transition flex items-center gap-3"
+            style={{ borderColor: lv.boss.color, boxShadow: `0 0 12px ${lv.boss.color}80`, color: "#e6f7ff" }}>
+            <div className="text-2xl" style={{ color: lv.boss.color, textShadow: `0 0 8px ${lv.boss.color}` }}>
+              L{i+1}
+            </div>
+            <div className="flex-1">
+              <div className="text-xs font-bold" style={{ color: lv.boss.color }}>{lv.boss.name}</div>
+              <div className="text-[10px] opacity-70">{lv.boss.intro}</div>
+            </div>
+            <div className="text-[10px]" style={{ color: "#fff176" }}>HP {lv.boss.hp}</div>
+          </button>
+        ))}
+      </div>
+      <div className="mt-6 flex justify-center"><NeonBtn color="#0ff" onClick={onBack}>← BACK</NeonBtn></div>
+    </div>
+  );
+}
+
 // ============== GAME PLAY CANVAS ==============
 
 function PlayCanvas({ level, practice = false, onComplete, onDeath, onScore, onStat, onHud }: {
