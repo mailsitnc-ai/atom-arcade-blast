@@ -133,7 +133,7 @@ export default function ChemistryGame() {
           )}
           {phase === "boss-select" && (
             <BossSelect
-              onPick={(i) => { setPracticeIdx(i); setPracticeKey(k => k + 1); setPhase("boss-practice"); }}
+              onPick={(i: number) => { setPracticeIdx(i); setPracticeKey(k => k + 1); setPhase("boss-practice"); }}
               onBack={() => setPhase("menu")}
             />
           )}
@@ -289,8 +289,9 @@ function Leaderboard({ lb, onBack }: { lb: LBEntry[]; onBack: () => void }) {
 
 // ============== GAME PLAY CANVAS ==============
 
-function PlayCanvas({ level, onComplete, onDeath, onScore, onStat, onHud }: {
+function PlayCanvas({ level, practice = false, onComplete, onDeath, onScore, onStat, onHud }: {
   level: typeof LEVELS[number];
+  practice?: boolean;
   onComplete: React.RefObject<() => void>;
   onDeath: React.RefObject<() => void>;
   onScore: React.RefObject<(n: number) => void>;
