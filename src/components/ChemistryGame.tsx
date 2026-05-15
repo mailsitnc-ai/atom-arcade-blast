@@ -13,6 +13,19 @@ type Enemy = V & { hp: number; cd: number; vx: number; vy: number };
 type Atom = V & { taken: boolean; symbol: string; pulse: number };
 type Particle = V & { vx: number; vy: number; life: number; color: string };
 type Boss = { x: number; y: number; hp: number; maxHp: number; phase: number; cd: number; t: number; introT: number };
+type PowerType = "heal" | "shield" | "rapid" | "damage" | "ammo";
+type Powerup = V & { kind: PowerType; taken: boolean; pulse: number };
+type Pool = V & { life: number; r: number; tick: number; dmg: number };
+type Zap = { points: V[]; life: number };
+type Blast = V & { r: number; maxR: number; life: number; dmg: number; hit: Set<any> };
+
+const POWER_INFO: Record<PowerType, { color: string; label: string; desc: string }> = {
+  heal:   { color: "#ff2e6e", label: "HEAL +1 HP",       desc: "Restored 1 health point" },
+  shield: { color: "#7df9ff", label: "SHIELD ACTIVE",    desc: "Invincible for 6 seconds" },
+  rapid:  { color: "#39ff14", label: "RAPID FIRE",       desc: "Half cooldown for 6 seconds" },
+  damage: { color: "#ff8a00", label: "DAMAGE x2",        desc: "Double damage for 6 seconds" },
+  ammo:   { color: "#fff176", label: "+25 AMMO",         desc: "Bonus ammo refilled" },
+};
 
 const W = 800, H = 500;
 const SYMBOLS = ["H", "He", "Li", "C", "N", "O", "Na", "Fe"];
