@@ -607,6 +607,85 @@ function PlayCanvas({ level, practice = false, onComplete, onDeath, onScore, onS
       }
       s.enemies = s.enemies.filter((e: Enemy) => e.hp > 0);
 
+      // ---- Acid Pools (L3) ----
+      s.pools = s.pools.filter((pl: Pool) => {
+        pl.life--;
+        pl.tick++;
+        if (pl.tick % 12 === 0) {
+          for (const e of s.enemies) {
+            if (e.hp > 0 && Math.hypot(e.x-pl.x, e.y-pl.y) < pl.r) {
+              e.hp -= pl.dmg;
+              spawnParticles(s, e.x, e.y, "#39ff14", 3);
+              if (e.hp <= 0) {
+                s.combo++; s.comboT = 90;
+                onStat.current!("combo", 1);
+                onScore.current!(100 + s.combo*10);
+                onStat.current!("enemies", 1);
+                spawnParticles(s, e.x, e.y, "#fff176", 12);
+              }
+            }
+          }
+          if (s.boss && Math.hypot(s.boss.x-pl.x, s.boss.y-pl.y) < pl.r + 30) {
+            s.boss.hp -= pl.dmg;
+            onScore.current!(15);
+            spawnParticles(s, pl.x, pl.y, "#39ff14", 3);
+          }
+        }
+        return pl.life > 0;
+      });
+
+      // ---- Chain Lightning Zaps (L4) — visual decay only, dmg applied on cast ----
+      s.zaps = s.zaps.filter((z: Zap) => { z.life--; return z.life > 0; });
+
+      // ---- Fusion Nova Blasts (L5) ----
+      s.blasts = s.blasts.filter((bl: Blast) => {
+        bl.life--;
+        bl.r = bl.r + (bl.maxR - bl.r) * 0.25;
+        for (const e of s.enemies) {
+          if (e.hp <= 0 || bl.hit.has(e)) continue;
+          if (Math.hypot(e.x-bl.x, e.y-bl.y) < bl.r) {
+            bl.hit.add(e); e.hp -= bl.dmg;
+            spawnParticles(s, e.x, e.y, "#fff176", 6);
+            if (e.hp <= 0) {
+              s.combo++; s.comboT = 90;
+              onStat.current!("combo", 1);
+              onScore.current!(100 + s.combo*10);
+              onStat.current!("enemies", 1);
+            }
+          }
+        }
+        if (s.boss && !bl.hit.has(s.boss) && Math.hypot(s.boss.x-bl.x, s.boss.y-bl.y) < bl.r + 30) {
+          bl.hit.add(s.boss); s.boss.hp -= bl.dmg; onScore.current!(40);
+          spawnParticles(s, bl.x, bl.y, "#fff176", 8);
+        }
+        return bl.life > 0;
+      });
+
+      // ---- Powerups ----
+      for (const pu of s.powerups) {
+        if (pu.taken) continue;
+        pu.pulse += 0.12;
+        if (Math.hypot(pu.x-p.x, pu.y-p.y) < 22) {
+          pu.taken = true;
+          const info = POWER_INFO[pu.kind as PowerType];
+          if (pu.kind === "heal") p.hp = Math.min(3, p.hp + 1);
+          else if (pu.kind === "shield") s.buffs.shield = 360;
+          else if (pu.kind === "rapid") s.buffs.rapid = 360;
+          else if (pu.kind === "damage") s.buffs.damage = 360;
+          else if (pu.kind === "ammo") s.ammo += 25;
+          s.banner = { text: info.label, sub: info.desc, color: info.color, t: 150 };
+          spawnParticles(s, pu.x, pu.y, info.color, 24);
+          sfx("atom");
+          onScore.current!(75);
+        }
+      }
+
+      // ---- Buffs ----
+      if (s.buffs.rapid > 0) s.buffs.rapid--;
+      if (s.buffs.damage > 0) s.buffs.damage--;
+      if (s.buffs.shield > 0) { s.buffs.shield--; if (p.iframes < 6) p.iframes = 6; }
+      if (s.banner) { s.banner.t--; if (s.banner.t <= 0) s.banner = null; }
+
       // Atoms
       for (const a of s.atoms) {
         if (a.taken) continue;
