@@ -408,17 +408,20 @@ function PlayCanvas({ level, practice = false, onComplete, onDeath, onScore, onS
 
   const fire = useCallback(() => {
     const s = stateRef.current; if (!s) return;
-    const cooldown = level.id === 2 ? 260 : level.id === 3 ? 180 : level.id === 5 ? 200 : 140;
+    let cooldown = level.id === 2 ? 260 : level.id === 3 ? 320 : level.id === 4 ? 220 : level.id === 5 ? 280 : 140;
+    if (s.buffs?.rapid > 0) cooldown = Math.floor(cooldown * 0.5);
     if (s.lastShot && performance.now() - s.lastShot < cooldown) return;
-    if (!s.unlimited && s.ammo <= 0) return;
+    const ammoCost = [1, 2, 2, 3, 4][level.id - 1] ?? 1;
+    if (!s.unlimited && s.ammo < ammoCost) return;
     s.lastShot = performance.now();
-    if (!s.unlimited) s.ammo--;
+    if (!s.unlimited) s.ammo -= ammoCost;
     const px = s.player.x, py = s.player.y;
     const dx = s.mouse.x - px, dy = s.mouse.y - py;
     const d = Math.hypot(dx,dy) || 1;
     const aim = Math.atan2(dy, dx);
     const sp = level.weapon.speed;
-    const dmg = level.weapon.damage + Math.floor(s.atomsCollected/3);
+    const baseDmg = level.weapon.damage + Math.floor(s.atomsCollected/3);
+    const dmg = s.buffs?.damage > 0 ? baseDmg * 2 : baseDmg;
     const mk = (vx: number, vy: number, extra: Partial<PBullet> = {}): PBullet => ({
       x: px, y: py, vx, vy, dmg, life: 90, ...extra,
     });
@@ -434,26 +437,48 @@ function PlayCanvas({ level, practice = false, onComplete, onDeath, onScore, onS
         }
         break;
       }
-      case 3: { // spray: 5-bullet cone toward mouse
-        for (let i = -2; i <= 2; i++) {
-          const a = aim + i * 0.18;
-          s.bullets.push(mk(Math.cos(a)*sp, Math.sin(a)*sp, { life: 80 }));
-        }
+      case 3: { // CORROSIVE ACID POOL: drop a lingering puddle at the mouse position
+        const tx = Math.max(20, Math.min(W-20, s.mouse.x));
+        const ty = Math.max(20, Math.min(H-20, s.mouse.y));
+        s.pools.push({ x: tx, y: ty, r: 36, life: 180, tick: 0, dmg });
+        spawnParticles(s, tx, ty, "#39ff14", 10);
         break;
       }
-      case 4: { // homing chain: 3 seeking bullets
-        for (let i = -1; i <= 1; i++) {
-          const a = aim + i * 0.35;
-          s.bullets.push(mk(Math.cos(a)*sp*0.8, Math.sin(a)*sp*0.8, { seek: true, life: 110 }));
+      case 4: { // CHAIN LIGHTNING: instant zap that arcs between up to 5 nearest targets
+        const targets: { x: number; y: number; hit: (d: number) => void }[] = [];
+        for (const e of s.enemies) if (e.hp > 0) targets.push({ x: e.x, y: e.y, hit: (d: number) => { e.hp -= d; spawnParticles(s, e.x, e.y, "#ff3df0", 6); } });
+        if (s.boss) {
+          const bs = s.boss;
+          targets.push({ x: bs.x, y: bs.y, hit: (d: number) => { bs.hp -= d; spawnParticles(s, bs.x, bs.y, "#ff3df0", 4); onScore.current!(20); } });
         }
+        if (targets.length === 0) {
+          // fallback ranged bolt
+          s.bullets.push(mk(Math.cos(aim)*sp, Math.sin(aim)*sp, { life: 60 }));
+          break;
+        }
+        const points: V[] = [{ x: px, y: py }];
+        let cur = { x: px, y: py };
+        const used = new Set<number>();
+        const maxJumps = 5;
+        for (let j = 0; j < maxJumps; j++) {
+          let bestI = -1, bestD = j === 0 ? 99999 : 130*130;
+          for (let i = 0; i < targets.length; i++) {
+            if (used.has(i)) continue;
+            const t = targets[i];
+            const dd = (t.x-cur.x)*(t.x-cur.x) + (t.y-cur.y)*(t.y-cur.y);
+            if (dd < bestD) { bestD = dd; bestI = i; }
+          }
+          if (bestI < 0) break;
+          used.add(bestI);
+          targets[bestI].hit(dmg);
+          points.push({ x: targets[bestI].x, y: targets[bestI].y });
+          cur = points[points.length - 1];
+        }
+        s.zaps.push({ points, life: 14 });
         break;
       }
-      case 5: { // fusion orb: heavy splitting projectile + 2 orbiters
-        s.bullets.push(mk(Math.cos(aim)*sp, Math.sin(aim)*sp, { split: 2, life: 90 }));
-        for (let i = 0; i < 2; i++) {
-          const a = aim + (i ? Math.PI/2 : -Math.PI/2);
-          s.bullets.push(mk(Math.cos(a)*sp*0.6, Math.sin(a)*sp*0.6, { life: 50 }));
-        }
+      case 5: { // FUSION NOVA: a heavy slow orb that detonates into a giant AoE blast on impact
+        s.bullets.push(mk(Math.cos(aim)*sp*0.55, Math.sin(aim)*sp*0.55, { life: 110, split: 1 }));
         break;
       }
     }
