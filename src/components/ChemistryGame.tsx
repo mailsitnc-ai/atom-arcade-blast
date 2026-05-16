@@ -4,8 +4,12 @@ import LearningScreen from "./game/LearningScreen";
 import QuizScreen from "./game/QuizScreen";
 import { sfx } from "./game/sound";
 import { loadLB, saveLB, type LBEntry } from "./game/leaderboard";
+import WeaponForge from "./game/WeaponForge";
+import LevelBuilder from "./game/LevelBuilder";
+import { fetchCustomLevels, toLevelDef, loadUnlocks, recordVictory, type Unlocks } from "@/lib/customContent";
+import type { LevelDef } from "./game/levels";
 
-type Phase = "menu" | "learn-intro" | "quiz" | "play" | "learn-recap" | "gameover" | "leaderboard" | "victory" | "boss-select" | "boss-practice";
+type Phase = "menu" | "learn-intro" | "quiz" | "play" | "learn-recap" | "gameover" | "leaderboard" | "victory" | "boss-select" | "boss-practice" | "weapon-forge" | "level-builder";
 type V = { x: number; y: number };
 type Bullet = V & { vx: number; vy: number; dmg: number; life: number };
 type PBullet = Bullet & { seek?: boolean; split?: number; trail?: string };
@@ -41,6 +45,18 @@ export default function ChemistryGame() {
   const [hud, setHud] = useState({ ammo: 10, atomsCollected: 0, enemiesLeft: 8, unlimited: false, bossHp: 0, bossMax: 0, bossActive: false, weapon: "" });
   const [practiceIdx, setPracticeIdx] = useState(0);
   const [practiceKey, setPracticeKey] = useState(0);
+  const [customLevels, setCustomLevels] = useState<LevelDef[]>([]);
+  const [unlocks, setUnlocks] = useState<Unlocks>({ weaponForge: false, levelBuilder: false });
+  const [unlockBanner, setUnlockBanner] = useState<string>("");
+
+  const ALL_LEVELS: LevelDef[] = [...LEVELS, ...customLevels];
+
+  const reloadCustomLevels = async () => {
+    const rows = await fetchCustomLevels();
+    setCustomLevels(rows.map(r => toLevelDef(r.row, r.weapon)));
+  };
+
+  useEffect(() => { setUnlocks(loadUnlocks()); reloadCustomLevels(); }, []);
 
   // Stable callback refs so PlayCanvas effect doesn't re-init every frame
   const onCompleteRef = useRef<() => void>(() => {});
@@ -64,7 +80,13 @@ export default function ChemistryGame() {
       return;
     }
     setStats(s => ({ ...s, bosses: s.bosses + 1 }));
-    if (levelIdx >= LEVELS.length - 1) {
+    if (levelIdx >= ALL_LEVELS.length - 1) {
+      // record unlocks based on lives
+      const r = recordVictory(lives);
+      setUnlocks(loadUnlocks());
+      if (r.newLevel) setUnlockBanner("🔓 LEVEL BUILDER UNLOCKED — finished with 4+ lives!");
+      else if (r.newWeapon) setUnlockBanner("🔓 WEAPON FORGE UNLOCKED — finished with 3+ lives!");
+      else setUnlockBanner("");
       setPhase("victory");
     } else {
       setPhase("learn-recap");
@@ -119,9 +141,9 @@ export default function ChemistryGame() {
 
       <div className="relative crt" style={{ width: W, maxWidth: "100%" }}>
         <div className="relative" style={{ width: W, height: H, maxWidth: "100%" }}>
-          {phase === "play" && (
+          {phase === "play" && ALL_LEVELS[levelIdx] && (
             <PlayCanvas
-              level={LEVELS[levelIdx]}
+              level={ALL_LEVELS[levelIdx]}
               onComplete={onCompleteRef}
               onDeath={onDeathRef}
               onScore={onScoreRef}
@@ -129,10 +151,10 @@ export default function ChemistryGame() {
               onHud={onHudRef}
             />
           )}
-          {phase === "boss-practice" && (
+          {phase === "boss-practice" && ALL_LEVELS[practiceIdx] && (
             <PlayCanvas
               key={`practice-${practiceIdx}-${practiceKey}`}
-              level={LEVELS[practiceIdx]}
+              level={ALL_LEVELS[practiceIdx]}
               practice
               onComplete={onCompleteRef}
               onDeath={onDeathRef}
@@ -142,17 +164,33 @@ export default function ChemistryGame() {
             />
           )}
           {phase === "menu" && (
-            <Menu onStart={startGame} onLB={() => setPhase("leaderboard")} onPractice={() => setPhase("boss-select")} lb={lb} />
+            <Menu
+              onStart={startGame}
+              onLB={() => setPhase("leaderboard")}
+              onPractice={() => setPhase("boss-select")}
+              onForge={() => setPhase("weapon-forge")}
+              onBuilder={() => setPhase("level-builder")}
+              unlocks={unlocks}
+              lb={lb}
+              customCount={customLevels.length}
+            />
           )}
           {phase === "boss-select" && (
             <BossSelect
+              levels={ALL_LEVELS}
               onPick={(i: number) => { setPracticeIdx(i); setPracticeKey(k => k + 1); setPhase("boss-practice"); }}
               onBack={() => setPhase("menu")}
             />
           )}
+          {phase === "weapon-forge" && (
+            <WeaponForge onBack={() => setPhase("menu")} onSaved={() => { reloadCustomLevels(); setPhase("menu"); }} />
+          )}
+          {phase === "level-builder" && (
+            <LevelBuilder onBack={() => setPhase("menu")} onSaved={() => { reloadCustomLevels(); setPhase("menu"); }} />
+          )}
           {(phase === "learn-intro" || phase === "learn-recap") && (
             <LearningScreen
-              level={LEVELS[levelIdx]}
+              level={ALL_LEVELS[levelIdx]}
               mode={phase === "learn-intro" ? "intro" : "recap"}
               onContinue={() => {
                 if (phase === "learn-intro") setPhase("quiz");
@@ -162,7 +200,7 @@ export default function ChemistryGame() {
           )}
           {phase === "quiz" && (
             <QuizScreen
-              level={LEVELS[levelIdx]}
+              level={ALL_LEVELS[levelIdx]}
               onPass={() => setPhase("play")}
               onRetry={() => setPhase("learn-intro")}
             />
@@ -182,7 +220,12 @@ export default function ChemistryGame() {
           )}
           {phase === "victory" && (
             <Overlay title="★ YOU WIN ★" color="#fff176">
-              <p className="text-xs mb-3">All 5 chemistry levels conquered!</p>
+              <p className="text-xs mb-3">All {ALL_LEVELS.length} chemistry levels conquered!</p>
+              {unlockBanner && (
+                <p className="text-[11px] mb-3 p-2 border-2" style={{ color: "#39ff14", borderColor: "#39ff14", boxShadow: "0 0 12px #39ff14" }}>
+                  {unlockBanner}
+                </p>
+              )}
               <p className="text-sm mb-4">SCORE: <span style={{color:"#0ff"}}>{score}</span></p>
               <input value={nameInput} onChange={e=>setNameInput(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,8))}
                 className="w-32 text-center text-lg p-2 bg-black border-2 mb-4 tracking-widest" style={{borderColor:"#fff176", color:"#fff176"}} maxLength={8} />
