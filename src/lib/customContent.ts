@@ -73,7 +73,7 @@ export async function fetchCustomLevels(): Promise<{ row: CustomLevelRow; weapon
   if (error) { console.error(error); return []; }
   const weapons = await fetchCustomWeapons();
   const wmap = new Map(weapons.map(w => [w.id, w]));
-  return (lvls ?? []).map((r: any) => ({ row: r as CustomLevelRow, weapon: r.weapon_id ? wmap.get(r.weapon_id) ?? null : null }));
+  return (lvls ?? []).map((r: any) => ({ row: r as unknown as CustomLevelRow, weapon: r.weapon_id ? wmap.get(r.weapon_id) ?? null : null }));
 }
 
 export async function nextLevelNumber(): Promise<number> {
@@ -99,11 +99,11 @@ export async function insertCustomWeapon(w: Omit<CustomWeapon, "id" | "created_a
 export async function insertCustomLevel(r: Omit<CustomLevelRow, "id">): Promise<CustomLevelRow | null> {
   const { data, error } = await supabase
     .from("custom_levels")
-    .insert(r)
+    .insert(r as any)
     .select()
     .single();
   if (error) { console.error(error); return null; }
-  return data as CustomLevelRow;
+  return data as unknown as CustomLevelRow;
 }
 
 // Convert a community level + weapon into a runtime LevelDef the engine understands.
