@@ -449,7 +449,14 @@ function PlayCanvas({ level, practice = false, onComplete, onDeath, onScore, onS
         for (const e of s.enemies) if (e.hp > 0) targets.push({ x: e.x, y: e.y, hit: (d: number) => { e.hp -= d; spawnParticles(s, e.x, e.y, "#ff3df0", 6); } });
         if (s.boss) {
           const bs = s.boss;
-          targets.push({ x: bs.x, y: bs.y, hit: (d: number) => { bs.hp -= d; spawnParticles(s, bs.x, bs.y, "#ff3df0", 4); onScore.current!(20); } });
+          targets.push({ x: bs.x, y: bs.y, hit: (d: number) => {
+            bs.hp -= d; spawnParticles(s, bs.x, bs.y, "#ff3df0", 4); onScore.current!(20);
+            if (bs.hp <= 0 && !s.bossDefeated) {
+              spawnParticles(s, bs.x, bs.y, "#fff176", 60);
+              s.shake = 25; s.bossDefeated = true; s.boss = null;
+              setTimeout(onComplete.current!, 800);
+            }
+          } });
         }
         if (targets.length === 0) {
           // fallback ranged bolt
