@@ -14,7 +14,146 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      custom_levels: {
+        Row: {
+          analogy: string
+          bg_a: string
+          bg_b: string
+          boss_color: string
+          boss_hp: number
+          boss_intro: string
+          boss_name: string
+          boss_pattern: string
+          boss_speed: number
+          bullets: string[]
+          concept: string
+          created_at: string
+          creator_name: string
+          diagram: string
+          enemy_color: string
+          enemy_hp: number
+          enemy_speed: number
+          headline: string
+          id: string
+          level_number: number
+          quiz: Json
+          tagline: string
+          title: string
+          weapon_id: string | null
+        }
+        Insert: {
+          analogy?: string
+          bg_a?: string
+          bg_b?: string
+          boss_color?: string
+          boss_hp?: number
+          boss_intro?: string
+          boss_name: string
+          boss_pattern: string
+          boss_speed?: number
+          bullets?: string[]
+          concept: string
+          created_at?: string
+          creator_name?: string
+          diagram?: string
+          enemy_color?: string
+          enemy_hp?: number
+          enemy_speed?: number
+          headline: string
+          id?: string
+          level_number: number
+          quiz?: Json
+          tagline: string
+          title: string
+          weapon_id?: string | null
+        }
+        Update: {
+          analogy?: string
+          bg_a?: string
+          bg_b?: string
+          boss_color?: string
+          boss_hp?: number
+          boss_intro?: string
+          boss_name?: string
+          boss_pattern?: string
+          boss_speed?: number
+          bullets?: string[]
+          concept?: string
+          created_at?: string
+          creator_name?: string
+          diagram?: string
+          enemy_color?: string
+          enemy_hp?: number
+          enemy_speed?: number
+          headline?: string
+          id?: string
+          level_number?: number
+          quiz?: Json
+          tagline?: string
+          title?: string
+          weapon_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_levels_weapon_id_fkey"
+            columns: ["weapon_id"]
+            isOneToOne: false
+            referencedRelation: "custom_weapons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      custom_weapons: {
+        Row: {
+          ammo_cost: number
+          color: string
+          created_at: string
+          creator_name: string
+          damage: number
+          description: string
+          id: string
+          name: string
+          particle_color: string
+          particle_count: number
+          pattern: string
+          sfx: string
+          size: number
+          speed: number
+        }
+        Insert: {
+          ammo_cost?: number
+          color?: string
+          created_at?: string
+          creator_name?: string
+          damage?: number
+          description?: string
+          id?: string
+          name: string
+          particle_color?: string
+          particle_count?: number
+          pattern: string
+          sfx?: string
+          size?: number
+          speed?: number
+        }
+        Update: {
+          ammo_cost?: number
+          color?: string
+          created_at?: string
+          creator_name?: string
+          damage?: number
+          description?: string
+          id?: string
+          name?: string
+          particle_color?: string
+          particle_count?: number
+          pattern?: string
+          sfx?: string
+          size?: number
+          speed?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
