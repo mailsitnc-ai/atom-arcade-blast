@@ -408,10 +408,11 @@ function PlayCanvas({ level, practice = false, onComplete, onDeath, onScore, onS
 
   const fire = useCallback(() => {
     const s = stateRef.current; if (!s) return;
-    let cooldown = level.id === 2 ? 260 : level.id === 3 ? 320 : level.id === 4 ? 220 : level.id === 5 ? 280 : 140;
+    const wk = (level.weapon.kind ?? level.id) as 1 | 2 | 3 | 4 | 5;
+    let cooldown = wk === 2 ? 260 : wk === 3 ? 320 : wk === 4 ? 220 : wk === 5 ? 280 : 140;
     if (s.buffs?.rapid > 0) cooldown = Math.floor(cooldown * 0.5);
     if (s.lastShot && performance.now() - s.lastShot < cooldown) return;
-    const ammoCost = [1, 2, 2, 3, 4][level.id - 1] ?? 1;
+    const ammoCost = level.weapon.ammoCost ?? ([1, 2, 2, 3, 4][level.id - 1] ?? 1);
     if (!s.unlimited && s.ammo < ammoCost) return;
     s.lastShot = performance.now();
     if (!s.unlimited) s.ammo -= ammoCost;
@@ -425,7 +426,7 @@ function PlayCanvas({ level, practice = false, onComplete, onDeath, onScore, onS
     const mk = (vx: number, vy: number, extra: Partial<PBullet> = {}): PBullet => ({
       x: px, y: py, vx, vy, dmg, life: 90, ...extra,
     });
-    switch (level.id) {
+    switch (wk) {
       case 1: { // straight beam
         s.bullets.push(mk((dx/d)*sp, (dy/d)*sp));
         break;
@@ -441,16 +442,16 @@ function PlayCanvas({ level, practice = false, onComplete, onDeath, onScore, onS
         const tx = Math.max(20, Math.min(W-20, s.mouse.x));
         const ty = Math.max(20, Math.min(H-20, s.mouse.y));
         s.pools.push({ x: tx, y: ty, r: 36, life: 180, tick: 0, dmg });
-        spawnParticles(s, tx, ty, "#39ff14", 10);
+        spawnParticles(s, tx, ty, level.weapon.particleColor ?? level.weapon.color, level.weapon.particleCount ?? 10);
         break;
       }
       case 4: { // CHAIN LIGHTNING: instant zap that arcs between up to 5 nearest targets
         const targets: { x: number; y: number; hit: (d: number) => void }[] = [];
-        for (const e of s.enemies) if (e.hp > 0) targets.push({ x: e.x, y: e.y, hit: (d: number) => { e.hp -= d; spawnParticles(s, e.x, e.y, "#ff3df0", 6); } });
+        for (const e of s.enemies) if (e.hp > 0) targets.push({ x: e.x, y: e.y, hit: (d: number) => { e.hp -= d; spawnParticles(s, e.x, e.y, level.weapon.color, 6); } });
         if (s.boss) {
           const bs = s.boss;
           targets.push({ x: bs.x, y: bs.y, hit: (d: number) => {
-            bs.hp -= d; spawnParticles(s, bs.x, bs.y, "#ff3df0", 4); onScore.current!(20);
+            bs.hp -= d; spawnParticles(s, bs.x, bs.y, level.weapon.color, 4); onScore.current!(20);
             if (bs.hp <= 0 && !s.bossDefeated) {
               spawnParticles(s, bs.x, bs.y, "#fff176", 60);
               s.shake = 25; s.bossDefeated = true; s.boss = null;
@@ -489,7 +490,7 @@ function PlayCanvas({ level, practice = false, onComplete, onDeath, onScore, onS
         break;
       }
     }
-    sfx("shoot");
+    sfx((level.weapon.sfx as any) ?? "shoot");
   }, [level]);
 
   useEffect(() => {
