@@ -299,19 +299,35 @@ function Overlay({ title, color, children }: any) {
   );
 }
 
-function Menu({ onStart, onLB, onPractice, lb }: { onStart: () => void; onLB: () => void; onPractice: () => void; lb: LBEntry[] }) {
+function Menu({ onStart, onLB, onPractice, onForge, onBuilder, unlocks, lb, customCount }: {
+  onStart: () => void; onLB: () => void; onPractice: () => void;
+  onForge: () => void; onBuilder: () => void;
+  unlocks: Unlocks; lb: LBEntry[]; customCount: number;
+}) {
   return (
     <div className="absolute inset-0 z-20 flex flex-col items-center justify-center crt p-6"
       style={{ background: "radial-gradient(circle at 50% 30%, #2a0a55, #07020f 70%)" }}>
       <div className="text-6xl md:text-7xl mb-4 neon" style={{ color: "#0ff" }}>⚛</div>
       <h2 className="text-xl md:text-3xl flicker mb-2" style={{ color: "#fff176" }}>PRESS START</h2>
       <p className="text-[10px] md:text-xs mb-6 max-w-md text-center opacity-80">
-        Battle through 5 chemistry-themed levels. Collect atoms, evolve weapons, defeat mutated bosses.
+        Battle through {5 + customCount} chemistry-themed levels{customCount > 0 ? ` (${customCount} community-made)` : ""}. Collect atoms, evolve weapons, defeat mutated bosses.
       </p>
       <div className="flex gap-3 mb-6 flex-wrap justify-center">
         <NeonBtn color="#39ff14" onClick={onStart}>▶ NEW GAME</NeonBtn>
         <NeonBtn color="#ff6ec7" onClick={onPractice}>⚔ BOSS PRACTICE</NeonBtn>
         <NeonBtn color="#0ff" onClick={onLB}>★ LEADERBOARD</NeonBtn>
+      </div>
+      <div className="flex gap-3 mb-4 flex-wrap justify-center">
+        <button onClick={unlocks.weaponForge ? onForge : undefined} disabled={!unlocks.weaponForge}
+          className="px-4 py-2 text-xs border-2 hover:scale-105 transition disabled:opacity-40 disabled:hover:scale-100"
+          style={{ borderColor: "#39ff14", color: "#39ff14", boxShadow: unlocks.weaponForge ? "0 0 18px #39ff14" : "none" }}>
+          {unlocks.weaponForge ? "🔧 WEAPON FORGE" : "🔒 WEAPON FORGE (finish with 3+ lives)"}
+        </button>
+        <button onClick={unlocks.levelBuilder ? onBuilder : undefined} disabled={!unlocks.levelBuilder}
+          className="px-4 py-2 text-xs border-2 hover:scale-105 transition disabled:opacity-40 disabled:hover:scale-100"
+          style={{ borderColor: "#fff176", color: "#fff176", boxShadow: unlocks.levelBuilder ? "0 0 18px #fff176" : "none" }}>
+          {unlocks.levelBuilder ? "🏗 LEVEL BUILDER" : "🔒 LEVEL BUILDER (finish with 4+ lives)"}
+        </button>
       </div>
       <div className="text-[10px] opacity-70 text-center">
         Top Score: <span style={{color:"#fff176"}}>{lb[0]?.score ?? 0}</span> by {lb[0]?.name ?? "—"}
@@ -343,14 +359,14 @@ function Leaderboard({ lb, onBack }: { lb: LBEntry[]; onBack: () => void }) {
   );
 }
 
-function BossSelect({ onPick, onBack }: { onPick: (i: number) => void; onBack: () => void }) {
+function BossSelect({ levels, onPick, onBack }: { levels: LevelDef[]; onPick: (i: number) => void; onBack: () => void }) {
   return (
     <div className="absolute inset-0 z-20 crt overflow-auto p-4"
       style={{ background: "radial-gradient(circle, #2a0a55, #07020f 80%)" }}>
       <h2 className="neon text-2xl text-center mb-1" style={{ color: "#ff6ec7" }}>⚔ BOSS PRACTICE ⚔</h2>
       <p className="text-[10px] text-center opacity-70 mb-4">No lives lost · Unlimited ammo · Master each boss</p>
       <div className="max-w-xl mx-auto grid gap-2">
-        {LEVELS.map((lv, i) => (
+        {levels.map((lv, i) => (
           <button key={i} onClick={() => onPick(i)}
             className="text-left p-3 border-2 hover:scale-[1.02] transition flex items-center gap-3"
             style={{ borderColor: lv.boss.color, boxShadow: `0 0 12px ${lv.boss.color}80`, color: "#e6f7ff" }}>
@@ -359,7 +375,7 @@ function BossSelect({ onPick, onBack }: { onPick: (i: number) => void; onBack: (
             </div>
             <div className="flex-1">
               <div className="text-xs font-bold" style={{ color: lv.boss.color }}>{lv.boss.name}</div>
-              <div className="text-[10px] opacity-70">{lv.boss.intro}</div>
+              <div className="text-[10px] opacity-70">{lv.boss.intro}{lv.isCustom ? ` · by ${lv.creatorName}` : ""}</div>
             </div>
             <div className="text-[10px]" style={{ color: "#fff176" }}>HP {lv.boss.hp}</div>
           </button>
