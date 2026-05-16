@@ -212,7 +212,7 @@ export default function ChemistryGame() {
           <div className="mt-2">
             <div className="text-[10px]" style={{color:"#ff2e2e"}}>BOSS HP</div>
             <div className="h-3 border-2" style={{borderColor:"#ff2e2e"}}>
-              <div className="h-full" style={{width:`${(hud.bossHp/hud.bossMax)*100}%`, background:"linear-gradient(90deg,#ff2e2e,#fff176)"}} />
+              <div className="h-full" style={{width:`${Math.max(0, Math.min(100, (hud.bossHp/hud.bossMax)*100))}%`, background:"linear-gradient(90deg,#ff2e2e,#fff176)"}} />
             </div>
           </div>
         )}
