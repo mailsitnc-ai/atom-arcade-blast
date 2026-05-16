@@ -2,7 +2,15 @@ export type LevelDef = {
   id: number;
   title: string;
   concept: string;
-  weapon: { name: string; color: string; speed: number; size: number; damage: number };
+  weapon: {
+    name: string; color: string; speed: number; size: number; damage: number;
+    /** 1=beam, 2=shield burst, 3=acid pool, 4=chain lightning, 5=fusion nova. Defaults to level.id for built-ins. */
+    kind?: 1 | 2 | 3 | 4 | 5;
+    ammoCost?: number;
+    particleColor?: string;
+    particleCount?: number;
+    sfx?: string;
+  };
   bgA: string;
   bgB: string;
   enemyColor: string;
@@ -24,6 +32,8 @@ export type LevelDef = {
     analogy: string;
     diagram: "atom" | "bond" | "ph" | "reaction" | "periodic";
   };
+  isCustom?: boolean;
+  creatorName?: string;
 };
 
 export const LEVELS: LevelDef[] = [
